@@ -1,0 +1,49 @@
+.collapsible-section {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.collapsible-section > summary {
+  cursor: pointer;
+  padding: 12px 16px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  list-style: none;
+}
+
+.collapsible-section > summary::-webkit-details-marker {
+  display: none;
+}
+
+.collapsible-section > summary:hover {
+  background: var(--code-bg);
+}
+
+.collapsible-section[open] {
+  border-color: rgba(173, 216, 230, 0.5);
+}
+
+.collapsible-section[open] > summary {
+  border-bottom: 1px solid var(--border);
+}
+
+.collapsible-section-chevron {
+  flex-shrink: 0;
+  opacity: 0.6;
+  transition: transform 0.15s ease;
+}
+
+.collapsible-section[open] > summary .collapsible-section-chevron {
+  transform: rotate(90deg);
+}
+
+.collapsible-section-body {
+  padding: 16px;
+}

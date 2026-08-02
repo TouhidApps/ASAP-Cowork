@@ -1,33 +1,33 @@
-# Gradle files
+# Gradle / Kotlin
 .gradle/
 build/
-
-# Local configuration file (sdk path, etc)
-local.properties
-
-# Log/OS Files
-*.log
-
-# Android Studio generated files and folders
-captures/
-.externalNativeBuild/
-.cxx/
-*.apk
-output.json
-
-# IntelliJ
+!gradle/wrapper/gradle-wrapper.jar
+out/
 *.iml
 .idea/
-misc.xml
-deploymentTargetDropDown.xml
-render.experimental.xml
 
-# Keystore files
-*.jks
-*.keystore
+# Node / web-ui
+node_modules/
+dist/
+dist-ssr/
+*.local
 
-# Google Services (e.g. APIs or Firebase)
-google-services.json
+# Env files
+.env
+web-ui/.env
 
-# Android Profiling
-*.hprof
+# OS
+.DS_Store
+.kotlin/
+
+# Claude Code local runtime state
+.claude/
+
+# Firebase CLI debug output (regenerated per run, can contain auth flow details)
+firebase-debug.log
+
+# Generated project output (see agent-sdk's Workspace)
+/workspace/
+
+# Local server settings (confirmed workspace root, etc.)
+/data/

@@ -1,0 +1,135 @@
+.admin-conv-toggle {
+  display: none;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-h);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.admin-conv-toggle-chevron {
+  flex-shrink: 0;
+  opacity: 0.6;
+  transition: transform 0.15s ease;
+}
+
+.admin-conv-toggle[aria-expanded='true'] .admin-conv-toggle-chevron {
+  transform: rotate(90deg);
+}
+
+.admin-conv-body {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.admin-conv-list {
+  width: 260px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-conv-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: transparent;
+}
+
+.admin-conv-item.selected {
+  background: var(--accent-bg);
+}
+
+.admin-conv-item-button {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--text-h);
+  font: inherit;
+  cursor: pointer;
+}
+
+.admin-conv-item-title {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-conv-item-date {
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+.admin-conv-item-delete {
+  border: none;
+  background: transparent;
+  color: #d94f4f;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.admin-conv-messages {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-conv-message-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-conv-message {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.admin-conv-message-meta {
+  font-size: 12px;
+  opacity: 0.6;
+  margin-bottom: 4px;
+}
+
+.admin-conv-message-content {
+  color: var(--text-h);
+  white-space: pre-wrap;
+}
+
+@media (max-width: 768px) {
+  .admin-conv-toggle {
+    display: flex;
+  }
+
+  .admin-conv-body {
+    flex-direction: column;
+  }
+
+  .admin-conv-list {
+    width: 100%;
+    display: none;
+  }
+
+  .admin-conv-list.open {
+    display: flex;
+  }
+}

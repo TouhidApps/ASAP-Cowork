@@ -1,0 +1,109 @@
+.notes-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-h);
+  padding: 6px 4px;
+}
+
+.notes-list {
+  gap: 4px;
+}
+
+.note-row {
+  display: flex;
+  padding: 10px 16px;
+  border-radius: 12px;
+}
+
+.note-row:hover {
+  background: var(--code-bg);
+}
+
+.note-row-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.note-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 150%;
+  color: var(--text-h);
+}
+
+.note-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.65;
+}
+
+.note-time {
+  flex-shrink: 0;
+}
+
+.note-link-button {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.note-link-button:hover {
+  opacity: 1;
+}
+
+.note-link-button--danger:hover {
+  color: #d94f4f;
+}
+
+.note-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.note-edit-textarea {
+  width: 100%;
+  min-height: 60px;
+  resize: vertical;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--accent-border);
+  background: var(--bg);
+  color: var(--text-h);
+  font: inherit;
+  line-height: 145%;
+  box-sizing: border-box;
+}
+
+.note-edit-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.note-action-button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.note-action-button:hover {
+  background: var(--code-bg);
+}
