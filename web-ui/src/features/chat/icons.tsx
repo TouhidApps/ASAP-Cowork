@@ -13,18 +13,6 @@ export function UserIcon() {
   )
 }
 
-export function BotIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
-      <rect x="4" y="8" width="16" height="11" rx="4" stroke="currentColor" strokeWidth="2" />
-      <path d="M12 8V4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <circle cx="12" cy="3" r="1.4" fill="currentColor" />
-      <circle cx="9" cy="13.5" r="1.4" fill="currentColor" />
-      <circle cx="15" cy="13.5" r="1.4" fill="currentColor" />
-    </svg>
-  )
-}
-
 // The app's own logo, rotated 90° clockwise so its upward mark reads as an
 // arrow — used as the assistant's reply avatar instead of a generic bot icon.
 export function AssistantAvatarIcon() {

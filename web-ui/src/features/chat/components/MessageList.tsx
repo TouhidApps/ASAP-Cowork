@@ -5,7 +5,6 @@ import {
   AndroidIcon,
   AppleIcon,
   AssistantAvatarIcon,
-  BotIcon,
   FlutterIcon,
   KmpIcon,
   KotlinIcon,
@@ -64,9 +63,7 @@ export function MessageList({
   if (messages.length === 0) {
     return (
       <div className="chat-welcome">
-        <div className="chat-welcome-icon">
-          <BotIcon />
-        </div>
+        <img src="/icon.png" alt="" className="chat-welcome-icon" />
         <h2>How can I help you today?</h2>
         <p>Describe the app you want to build.</p>
         <div className="chat-platform-row" aria-label="Supported platforms">
