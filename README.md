@@ -30,6 +30,7 @@
   - [Prerequisites](#prerequisites)
   - [Quick Start (automated setup script)](#quick-start-automated-setup-script)
   - [Manual Setup (step by step)](#manual-setup-step-by-step)
+- [Tailscale Setup (remote access via Funnel)](#tailscale-setup-remote-access-via-funnel)
 - [Running from a Packaged Jar](#running-from-a-packaged-jar)
 - [Configuration](#configuration)
 - [Project Status](#project-status)
@@ -252,6 +253,65 @@ If you're not on macOS, or prefer to do it yourself:
    ```
 
 9. **Open the app** at **http://localhost:8080** (the Vite dev server proxies `/api`, `/health`, and `/ws` to the backend on `:8081`).
+
+> **Tips**
+> - Keep the laptop's sleep / screen-lock mode **off** while running builds and Tailscale Funnel — sleep interrupts an in-progress build or breaks the tunnel.
+> - Keep the test device's sleep / auto-lock **off** (or enable "Stay awake while charging" in Developer Options) so recordings and app sessions aren't cut short.
+
+## Tailscale Setup (remote access via Funnel)
+
+<img src="docs/assets/architecture-tailscale-remote-build.svg" width="700" alt="Architecture diagram: a mobile client sends a request over an encrypted Tailscale Funnel tunnel to a personal laptop (any development machine), which runs chat-gateway and build-runner and keeps development, the build, and the emulator local via Gradle, ADB, and the emulator" />
+
+[Tailscale](https://tailscale.com) lets you reach the web UI from another device (e.g. testing from a phone) by exposing it over your tailnet's HTTPS via **Tailscale Funnel**. `./asap.sh` installs and checks Tailscale for you (see [Quick Start](#quick-start-automated-setup-script), option 3), but you can also do it manually.
+
+### Install
+
+- **macOS:**
+  ```bash
+  brew install tailscale
+  brew services start tailscale
+  ```
+- **Other OS:** follow the [official install instructions](https://tailscale.com/download) for your platform.
+
+### Connect
+
+```bash
+sudo tailscale up
+```
+
+This opens a browser to log in / link the machine to your tailnet. Check connection status any time with:
+
+```bash
+tailscale status
+```
+
+> **Easiest path:** just open the Tailscale app (make sure it's running/connected), then run `./asap.sh` and choose **option 2**. It starts everything and turns on the Funnel for you — no manual `tailscale funnel` commands needed.
+
+### Create a Funnel
+
+`./asap.sh` → option 2 ("Run All with Tailscale Funnel") does this automatically for the web UI port, but the underlying commands are:
+
+```bash
+# Start a funnel, exposing local port $FRONTEND_PORT (default 8080) publicly over HTTPS
+tailscale funnel --bg 8080
+
+# Check funnel status / public URL
+tailscale funnel status
+
+# Stop the funnel
+tailscale funnel 8080 off
+```
+
+After choosing **option 2**, `asap.sh` prints the Funnel status to the terminal once it's up — that output includes your public HTTPS URL:
+
+```
+https://your-machine-name.your-tailnet.ts.net (Funnel on)
+|-- / proxy http://127.0.0.1:8080
+```
+
+Copy the `https://your-machine-name.your-tailnet.ts.net` URL from the terminal and open it in your test device's mobile browser — that's how the phone reaches the web UI running on your laptop. The exact hostname depends on your machine name and tailnet, so it will differ from the example above; you can also re-check it anytime with `tailscale funnel status`.
+
+> If you're running the backend directly (not through `asap.sh`), also add your Tailscale device's hostname/IP to `ALLOWED_HOSTS` in `.env` so the server accepts requests from it — see [Configuration](#configuration).
 
 ## Running from a Packaged Jar
 
