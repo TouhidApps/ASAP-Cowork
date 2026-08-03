@@ -38,23 +38,13 @@
 
 ## Demo
 
-📺 [Watch the demo video](docs/assets/screen-recording-app-walkthrough.mp4)
+<img src="docs/assets/screen-recording-app-walkthrough.gif" width="200" alt="ASAP-Cowork demo — building and running a KMP project from chat" />
 
 <p float="left">
   <img src="docs/assets/screenshot-chat-home.png" width="32%" alt="Chat home screen" />
   <img src="docs/assets/screenshot-workspace-listing.png" width="32%" alt="Listing projects in the workspace directory" />
   <img src="docs/assets/screenshot-emulator-run.png" width="32%" alt="Running an app on the emulator and capturing a screenshot" />
 </p>
-
-<!--
-For the video to play inline (not just download) on the GitHub repo page, upload it through
-GitHub's own asset host instead of relying on the raw file link above:
-  1. Open a new issue (or a PR/comment box) on the GitHub repo.
-  2. Drag-and-drop the .mp4 file into the comment box and wait for the upload to finish.
-  3. GitHub inserts a link like https://github.com/user-attachments/assets/<uuid> — copy it.
-  4. Replace the link above with that URL (a bare link on its own line renders as an inline player).
-  5. You can delete the uploaded issue/comment afterward; the video link stays valid.
--->
 
 ## Overview
 
