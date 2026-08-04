@@ -19,6 +19,38 @@ warn() { echo -e "  ${YELLOW}!${NC} $1"; }
 fail() { echo -e "  ${RED}✗${NC} $1"; }
 step() { echo; echo "== $1 =="; }
 
+# Prepends $1 to PATH unless PATH is unset (then just sets it) or $1 is
+# already present — avoids growing PATH with duplicate entries when this
+# script re-runs within the same shell session.
+add_to_path() {
+  local dir="$1"
+  if [[ -z "${PATH:-}" ]]; then
+    PATH="$dir"
+  else
+    case ":$PATH:" in
+      *":$dir:"*) ;;
+      *) PATH="$dir:$PATH" ;;
+    esac
+  fi
+}
+
+# Resolves the JDK home for a project-scoped openjdk@21, installed via
+# Homebrew but never linked onto PATH/JAVA_HOME and never registered with
+# `/usr/libexec/java_home` — so it can't become the default JDK for any
+# other project on this machine. Prints the home path and returns 0 if
+# it's actually installed; returns 1 (prints nothing) otherwise. Callers
+# pass the result to `./gradlew -Dorg.gradle.java.home=...` so it's only
+# ever used for this project's own build invocations.
+resolve_project_java_home() {
+  [[ "$(uname -s)" == "Darwin" ]] || return 1
+  command -v brew >/dev/null 2>&1 || return 1
+  local prefix home
+  prefix="$(brew --prefix openjdk@21 2>/dev/null)" || return 1
+  home="$prefix/libexec/openjdk.jdk/Contents/Home"
+  [[ -x "$home/bin/java" ]] || return 1
+  echo "$home"
+}
+
 run_setup() {
   OS="$(uname -s)"
 
@@ -64,48 +96,49 @@ run_setup() {
     ok "initialized"
   fi
 
-  # --- Java 21+ (required by Kotlin/Ktor) ---
-  step "Java"
-  java_ok=false
-  if command -v java >/dev/null 2>&1; then
-    java_ver=$(java -version 2>&1 | head -1 | grep -oE '"[0-9]+' | tr -d '"')
-    if [[ -n "$java_ver" && "$java_ver" -ge 21 ]]; then
-      ok "java $java_ver installed"
-      java_ok=true
+  # --- Java 21 (project-scoped — required by Kotlin/Ktor) ---
+  # Installed via Homebrew but deliberately never linked onto PATH/JAVA_HOME,
+  # never registered with `/usr/libexec/java_home`, and never written into
+  # any gradle.properties (project or global). run_all() passes its home
+  # path straight to `./gradlew -Dorg.gradle.java.home=...`, so it's used
+  # only for this project's own builds and can't change what JDK any other
+  # Java/Android project on this machine resolves to.
+  step "Java (project-scoped, openjdk@21)"
+  if [[ "$OS" == "Darwin" ]]; then
+    if ! brew list --formula openjdk@21 >/dev/null 2>&1; then
+      warn "installing openjdk@21 via Homebrew (kept project-scoped — not linked onto system PATH)..."
+      brew install openjdk@21
+    fi
+    PROJECT_JAVA_HOME="$(resolve_project_java_home)"
+    if [[ -n "$PROJECT_JAVA_HOME" ]]; then
+      ok "openjdk@21 ready at $PROJECT_JAVA_HOME — used only for this project's ./gradlew runs"
     else
-      warn "java $java_ver found, but 21+ is required"
+      fail "openjdk@21 installed but its JDK home could not be resolved at $(brew --prefix openjdk@21 2>/dev/null)/libexec/openjdk.jdk/Contents/Home"
+      exit 1
     fi
   else
-    warn "java not found"
-  fi
-
-  if [[ "$java_ok" == false ]]; then
-    if [[ "$OS" == "Darwin" ]]; then
-      warn "installing openjdk@21 via Homebrew..."
-      brew install openjdk@21
-      java_prefix="$(brew --prefix openjdk@21)"
-      sudo ln -sfn "$java_prefix/libexec/openjdk.jdk" \
-        "/Library/Java/JavaVirtualMachines/openjdk-21.jdk"
-      shell_rc="$HOME/.zshrc"
-      path_line="export PATH=\"$java_prefix/bin:\$PATH\""
-      if ! grep -qxF "$path_line" "$shell_rc" 2>/dev/null; then
-        echo "$path_line" >> "$shell_rc"
-        warn "added openjdk@21 to PATH in $shell_rc — restart your terminal or run: source $shell_rc"
-      fi
-      export PATH="$java_prefix/bin:$PATH"
-      ok "installed"
-    else
+    java_ver=""
+    if command -v java >/dev/null 2>&1; then
+      java_ver=$(java -version 2>&1 | head -1 | grep -oE '"[0-9]+' | tr -d '"')
+    fi
+    if [[ -z "$java_ver" || "$java_ver" -lt 21 ]]; then
       fail "install a JDK 21+ manually for your OS, then re-run this script"
       exit 1
     fi
+    ok "java $java_ver installed"
   fi
 
-  # --- Gradle (global; used to bootstrap the root project's wrapper) ---
+  # --- Gradle (global; only used to bootstrap ./gradlew if it's missing —
+  #     actual builds always run through ./gradlew, which pins its own
+  #     Gradle version via gradle/wrapper/gradle-wrapper.properties and gets
+  #     -Dorg.gradle.java.home passed explicitly, so neither the Gradle
+  #     version nor the JDK used to build this project depends on anything
+  #     global.) ---
   step "Gradle"
   if command -v gradle >/dev/null 2>&1; then
-    ok "installed ($(gradle -v 2>/dev/null | grep -m1 '^Gradle '))"
+    ok "installed ($(gradle -v 2>/dev/null | grep -m1 '^Gradle ')) — only used to bootstrap ./gradlew if missing"
   else
-    warn "not found — installing..."
+    warn "not found — installing (only needed to bootstrap ./gradlew if missing)..."
     if [[ "$OS" == "Darwin" ]]; then
       brew install gradle
     else
@@ -113,6 +146,10 @@ run_setup() {
       exit 1
     fi
     ok "installed"
+  fi
+
+  if [[ -f "$HOME/.gradle/gradle.properties" ]] && grep -q '^org\.gradle\.java\.home=' "$HOME/.gradle/gradle.properties" 2>/dev/null; then
+    warn "note: ~/.gradle/gradle.properties pins org.gradle.java.home globally — left untouched; this project's ./gradlew runs override it with openjdk@21 via -Dorg.gradle.java.home"
   fi
 
   # --- Android SDK (adb/emulator/sdkmanager, android-34 system image, AVD —
@@ -133,7 +170,10 @@ run_setup() {
     cmdline_bin="$(brew --prefix)/share/android-commandlinetools/cmdline-tools/latest/bin"
     export ANDROID_HOME="$android_home"
     export ANDROID_SDK_ROOT="$android_home"
-    export PATH="$cmdline_bin:$android_home/platform-tools:$android_home/emulator:$PATH"
+    add_to_path "$android_home/emulator"
+    add_to_path "$android_home/platform-tools"
+    add_to_path "$cmdline_bin"
+    export PATH
 
     if [[ "$(uname -m)" == "arm64" ]]; then
       abi="arm64-v8a"
@@ -320,7 +360,9 @@ run_all() {
   if [ -z "${ANDROID_HOME:-}" ] && [ -d "$HOME/Library/Android/sdk" ]; then
     export ANDROID_HOME="$HOME/Library/Android/sdk"
     export ANDROID_SDK_ROOT="$ANDROID_HOME"
-    export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
+    add_to_path "$ANDROID_HOME/emulator"
+    add_to_path "$ANDROID_HOME/platform-tools"
+    export PATH
   fi
 
   for port in "$FRONTEND_PORT" "$BACKEND_PORT" "$BUILD_RUNNER_PORT"; do
@@ -331,6 +373,19 @@ run_all() {
     fi
   done
   sleep 1
+
+  # Project-scoped JDK (see resolve_project_java_home) — passed explicitly
+  # to every ./gradlew call below so this project's builds use the right
+  # Java version regardless of system PATH/JAVA_HOME or any global
+  # ~/.gradle/gradle.properties override, without ever touching either.
+  gradle_java_home_flag=()
+  project_java_home="$(resolve_project_java_home)"
+  if [[ -n "$project_java_home" ]]; then
+    echo "Using project-scoped JDK for Gradle builds: $project_java_home"
+    gradle_java_home_flag=(-Dorg.gradle.java.home="$project_java_home")
+  else
+    warn "openjdk@21 not found for this project (run option 3 setup first) — falling back to gradle's default JVM resolution"
+  fi
 
   cleanup() {
     if [ "${with_funnel:-false}" = "true" ]; then
@@ -343,7 +398,7 @@ run_all() {
 
   # build-runner owns all Gradle/adb/emulator execution (PLAN.md §5) — start
   # it first so chat-gateway's android-agent tools have somewhere to call.
-  ./gradlew :build-runner:run &
+  ./gradlew "${gradle_java_home_flag[@]}" :build-runner:run &
 
   echo "Waiting for build-runner on :$BUILD_RUNNER_PORT..."
   for i in $(seq 1 60); do
@@ -354,7 +409,7 @@ run_all() {
     sleep 1
   done
 
-  ./gradlew :chat-gateway:run &
+  ./gradlew "${gradle_java_home_flag[@]}" :chat-gateway:run &
 
   echo "Waiting for backend on :$BACKEND_PORT..."
   for i in $(seq 1 60); do

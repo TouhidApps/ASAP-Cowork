@@ -27,6 +27,13 @@ Control surface: a chat UI drives the agent, with streaming chat responses enabl
 - Frontend: React
 - Chat: streaming enabled
 
+## Architecture Guidelines
+
+Every project scaffolded by or within this codebase — this repo's own modules (e.g. `chat-gateway`, `build-runner`) and any mobile app project the scaffolding agent generates for end users (Kotlin, Swift, KMP, Flutter, React Native, etc.) — must follow:
+
+- **Multi-module architecture**: split by layer/feature into separate modules (Gradle modules, Swift packages, Flutter/Dart packages, etc.) rather than one monolithic module.
+- **Clean Architecture**: enforce the dependency rule — domain layer has no outward dependencies, data/infrastructure and presentation/UI layers depend inward on domain, never the reverse.
+
 ## Status
 
 This repository does not yet contain code. Update this file with real build/lint/test commands and a high-level architecture overview once implementation begins.
