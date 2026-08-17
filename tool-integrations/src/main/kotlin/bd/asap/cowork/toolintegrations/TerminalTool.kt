@@ -36,6 +36,9 @@ object TerminalTool {
         if (isGitForcePush(command)) {
             return ToolResult("Refusing to run a force-push (git push -f/--force/...).", isError = true)
         }
+        if (".asap-history" in command) {
+            return ToolResult("Refusing to run a command referencing .asap-history — that's the workspace's internal change-history store, not a project file.", isError = true)
+        }
 
         val (success, output) = ProcessRunner.run(
             command = listOf("sh", "-c", command),

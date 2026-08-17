@@ -33,8 +33,8 @@ export function ChatHistoryDrawer({
 
   return (
     <>
-      <div className="chat-drawer-backdrop" onClick={onClose} />
-      <aside className="chat-drawer">
+      <div className="chat-dropdown-backdrop" onClick={onClose} />
+      <aside className="chat-dropdown chat-history-dropdown">
         <div className="chat-drawer-header">
           <h3>Chat history</h3>
           <button className="chat-drawer-close" onClick={onClose} aria-label="Close history">

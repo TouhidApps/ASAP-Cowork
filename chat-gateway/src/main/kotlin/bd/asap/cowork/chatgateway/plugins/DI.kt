@@ -51,6 +51,7 @@ import bd.asap.cowork.orchestrator.IntentClassifier
 import bd.asap.cowork.orchestrator.Orchestrator
 import bd.asap.cowork.orchestrator.ProjectContext
 import bd.asap.cowork.toolintegrations.ToolchainPathsRegistry
+import bd.asap.cowork.workspacehistory.WorkspaceHistoryService
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import kotlinx.coroutines.runBlocking
@@ -105,6 +106,7 @@ fun appModule(contextDatabase: ContextDatabase) = module {
         val initialRoot = store.readRootPath()?.let(Paths::get) ?: defaultRoot
         ProjectContext(initialRoot)
     }
+    single { WorkspaceHistoryService(get()) }
     single(createdAtStart = true) {
         val store = ToolchainSettingsStore(get())
         // Eager (createdAtStart) so ToolchainPathsRegistry is seeded at

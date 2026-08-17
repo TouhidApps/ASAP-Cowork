@@ -9,6 +9,7 @@ import bd.asap.cowork.chatgateway.IncomingMessage
 import bd.asap.cowork.chatgateway.common.ApiResponse
 import bd.asap.cowork.chatgateway.features.admin.adminRoutes
 import bd.asap.cowork.chatgateway.features.chat.chatRoutes
+import bd.asap.cowork.chatgateway.features.history.historyRoutes
 import bd.asap.cowork.chatgateway.features.logcat.logcatRoutes
 import bd.asap.cowork.chatgateway.features.notes.notesRoutes
 import bd.asap.cowork.chatgateway.toWire
@@ -16,6 +17,7 @@ import bd.asap.cowork.contextstore.ConversationRepository
 import bd.asap.cowork.contextstore.StoredMessage
 import bd.asap.cowork.orchestrator.Orchestrator
 import bd.asap.cowork.orchestrator.ProjectContext
+import bd.asap.cowork.workspacehistory.WorkspaceHistoryService
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
@@ -52,6 +54,7 @@ fun Application.configureRouting() {
     val orchestrator by inject<Orchestrator>()
     val conversation by inject<ConversationRepository>()
     val projectContext by inject<ProjectContext>()
+    val workspaceHistory by inject<WorkspaceHistoryService>()
 
     routing {
         get("/health") {
@@ -66,6 +69,7 @@ fun Application.configureRouting() {
         notesRoutes()
         chatRoutes()
         logcatRoutes()
+        historyRoutes()
 
         get("/api/v1/screenshots/{filename}") {
             val filename = call.parameters["filename"]
@@ -174,14 +178,32 @@ fun Application.configureRouting() {
 
                 val assistantReply = StringBuilder()
 
+                // Bootstraps the shadow history repo against whatever's on disk *before*
+                // this turn's own edits land, so the commitIfDirty call below captures only
+                // this turn's diff instead of having a first-ever call swallow it into the
+                // bootstrap's "Initial snapshot" commit — see WorkspaceHistoryService docs.
+                workspaceHistory.ensureInitialized()
+
                 orchestrator.route(incomingMessage.content, history = history, attachments = attachments).collect { event ->
                     if (event is AgentEvent.TextDelta) assistantReply.append(event.text)
                     send(Frame.Text(Json.encodeToString<ChatEvent>(event.toWire())))
                 }
 
+                var assistantMessageId: String? = null
                 if (assistantReply.isNotEmpty()) {
-                    conversation.appendMessage(conversationId, StoredMessage(role = "assistant", content = assistantReply.toString()))
+                    val assistantMessage = StoredMessage(role = "assistant", content = assistantReply.toString())
+                    assistantMessageId = assistantMessage.id
+                    conversation.appendMessage(conversationId, assistantMessage)
                 }
+
+                // Not gated on assistantReply being non-empty — a turn can change files via
+                // tool calls with little or no reply text, and that should still get its own
+                // history entry.
+                workspaceHistory.commitIfDirty(
+                    conversationId = conversationId,
+                    messageId = assistantMessageId,
+                    label = assistantReply.toString().ifBlank { "Workspace changes" },
+                )
             }
         }
 

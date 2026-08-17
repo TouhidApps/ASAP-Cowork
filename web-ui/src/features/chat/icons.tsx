@@ -72,6 +72,15 @@ export function TerminalIcon() {
   )
 }
 
+export function DiffIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
+      <path d="M9 4v16M15 4v16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M4 9h5M15 9h5M4 15h5M15 15h5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 export function CheckIcon() {
   return (
     <svg viewBox="0 0 24 24" width="12" height="12" fill="none" aria-hidden="true">

@@ -19,7 +19,7 @@ object ScanForSecretsTool {
     const val NAME = "scan_for_secrets"
     private const val TIMEOUT_SECONDS = 60L
     private const val MAX_OUTPUT_CHARS = 6_000
-    private val EXCLUDE_DIRS = listOf(".git", "node_modules", "build", ".gradle", ".kotlin", "venv", "dist", ".next", "vendor", ".asap-screenshots", ".asap-videos")
+    private val EXCLUDE_DIRS = listOf(".git", "node_modules", "build", ".gradle", ".kotlin", "venv", "dist", ".next", "vendor", ".asap-screenshots", ".asap-videos", ".asap-history")
 
     // Case-insensitive matching (grep -i) throughout — the fixed-prefix
     // formats (AKIA, AIza, ghp_, sk_live_, xox…) are only ever generated in

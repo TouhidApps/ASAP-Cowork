@@ -58,6 +58,7 @@ dependencies {
     implementation(project(":tool-integrations"))
     implementation(project(":firebase-integration"))
     implementation(project(":context-store"))
+    implementation(project(":workspace-history"))
     implementation(project(":agents:requirements-agent"))
     implementation(project(":agents:architecture-advisor-agent"))
     implementation(project(":agents:techstack-agent"))
@@ -98,5 +99,6 @@ dependencies {
     implementation("ch.qos.logback:logback-classic:1.5.16")
 
     testImplementation("io.ktor:ktor-server-test-host")
+    testImplementation("io.ktor:ktor-client-content-negotiation")
     testImplementation(kotlin("test"))
 }

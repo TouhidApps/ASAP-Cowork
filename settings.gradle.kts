@@ -7,6 +7,7 @@ include(
     ":firebase-integration",
     ":context-store",
     ":orchestrator-core",
+    ":workspace-history",
     ":build-runner",
     ":chat-gateway",
     ":agents:requirements-agent",
