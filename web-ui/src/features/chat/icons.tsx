@@ -81,6 +81,75 @@ export function DiffIcon() {
   )
 }
 
+export function PlanIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
+      <path d="M7 3h7l4 4v14H7z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M14 3v4h4" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M9.5 12h5M9.5 15.5h5M9.5 18.5h3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+export function FolderIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
+      <path
+        d="M4 6.5A1.5 1.5 0 0 1 5.5 5h4l2 2.2h7A1.5 1.5 0 0 1 20 8.7v9.8A1.5 1.5 0 0 1 18.5 20h-13A1.5 1.5 0 0 1 4 18.5v-12z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+export function ChevronRightIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" aria-hidden="true">
+      <path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+export function FileTextIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+      <path
+        d="M6.5 3.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-9.5A1.5 1.5 0 0 1 5 19V5a1.5 1.5 0 0 1 1.5-1.5z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path d="M13.5 3.5V8h4.5" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+export function ImageFileIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+      <rect x="5" y="4.5" width="14" height="15" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="9.2" cy="9" r="1.4" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M5.8 17l4.4-4.6a1.3 1.3 0 0 1 1.9.05L19 19" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+export function RefreshIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+      <path
+        d="M19 5v5h-5M5 19v-5h5M5.5 9a7 7 0 0 1 12.3-3.2M18.5 15a7 7 0 0 1-12.3 3.2"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 export function CheckIcon() {
   return (
     <svg viewBox="0 0 24 24" width="12" height="12" fill="none" aria-hidden="true">
@@ -93,6 +162,20 @@ export function CloseIcon() {
   return (
     <svg viewBox="0 0 24 24" width="12" height="12" fill="none" aria-hidden="true">
       <path d="M5 5l14 14M19 5L5 19" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+export function NoteIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" aria-hidden="true">
+      <path
+        d="M6 3.5h9l3 3V19a1.5 1.5 0 0 1-1.5 1.5h-10.5A1.5 1.5 0 0 1 4.5 19V5A1.5 1.5 0 0 1 6 3.5z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <path d="M8 9.5h8M8 13h8M8 16.5h5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
   )
 }
@@ -134,44 +217,22 @@ export function KotlinIcon() {
   )
 }
 
-export function AndroidIcon() {
-  return (
-    <svg viewBox="0 0 28 28" width="28" height="28" fill="#3ddc84" aria-hidden="true">
-      <path d="M8.5 11.5v7a1.3 1.3 0 0 0 2.6 0v-7h-2.6zM17 11.5v7a1.3 1.3 0 0 0 2.6 0v-7H17zM11.5 11.5v9.2a1.4 1.4 0 0 0 2.8 0v-3h.4v3a1.4 1.4 0 0 0 2.8 0v-9.2h-6z" />
-      <path d="M11.6 9.8h4.9c-.1-1.6-1.2-2.9-2.4-2.9s-2.4 1.3-2.5 2.9z" />
-      <rect x="11.2" y="9.8" width="5.6" height="1.1" rx="0.3" />
-      <circle cx="12.3" cy="6.1" r="0.55" />
-      <circle cx="15.7" cy="6.1" r="0.55" />
-      <path d="M9.5 6l1.3 1.6M18.5 6l-1.3 1.6" stroke="#3ddc84" strokeWidth="0.7" strokeLinecap="round" fill="none" />
-    </svg>
-  )
-}
-
-export function AppleIcon() {
-  return (
-    <svg viewBox="0 0 28 28" width="28" height="28" fill="currentColor" aria-hidden="true">
-      <path d="M18.4 8.1c-1 0-2.3.6-3 .6-.8 0-1.9-.6-3.1-.6-2.3 0-4.6 1.9-4.6 5.5 0 2.3.9 4.7 2 6.3.9 1.4 1.7 2.5 2.9 2.5 1.1 0 1.6-.7 2.9-.7s1.7.7 2.9.7c1.2 0 2-1.1 2.8-2.3.6-.9 1-1.7 1.3-2.6-3.2-1.2-3.4-5.4-.3-7.1-.9-1.3-2.3-2.1-3.8-2.3z" />
-      <path d="M15.9 6.9c.6-.7 1-1.7.9-2.7-.9.1-1.9.6-2.5 1.3-.5.6-1 1.6-.9 2.6 1 .1 2-.5 2.5-1.2z" />
-    </svg>
-  )
-}
-
+// Bird silhouette adapted from Simple Icons (simpleicons.org), MIT/CC0-licensed
+// SVG data used for tech-stack "built with" badges across the ecosystem —
+// background chip dropped and recolored with this file's gradient style so it
+// sits consistently among the other platform marks below.
 export function SwiftIcon() {
   return (
-    <svg viewBox="0 0 28 28" width="28" height="28" aria-hidden="true">
+    <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
       <defs>
-        <linearGradient id="platform-swift" x1="4" y1="6" x2="24" y2="22" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#fa8c3c" />
-          <stop offset="1" stopColor="#f0512a" />
+        <linearGradient id="platform-swift" x1="2" y1="3" x2="21" y2="20" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#ffb040" />
+          <stop offset="1" stopColor="#ef4d2a" />
         </linearGradient>
       </defs>
       <path
-        d="M6 6c4.5 2.5 9 5.6 12.5 9.3-3.8-1.8-7.6-3.3-11-5.5.9 1.3 2 2.6 3.3 3.9C8 12.4 5.7 9.4 6 6z"
         fill="url(#platform-swift)"
-      />
-      <path
-        d="M19.5 16.4c.6-2.2-.1-4.9-1.5-7.1 1.7 1.5 3.2 3.6 3.8 6 .5 2 .3 4.3-1.1 5.7-2 2-5.4 2-8.4 1a13.6 13.6 0 0 1-6.3-4.4c1.7 1.1 3.7 1.9 5.8 2.1 3 .3 6.7-.6 7.7-3.3z"
-        fill="url(#platform-swift)"
+        d="M13.543 3.41c4.114 2.47 6.545 7.162 5.549 11.131-.024.093-.05.181-.076.272l.002.001c2.062 2.538 1.5 5.258 1.236 4.745-1.072-2.086-3.066-1.568-4.088-1.043a6.803 6.803 0 0 1-.281.158l-.02.012-.002.002c-2.115 1.123-4.957 1.205-7.812-.022a12.568 12.568 0 0 1-5.64-4.838c.649.48 1.35.902 2.097 1.252 3.019 1.414 6.051 1.311 8.197-.002C9.651 12.73 7.101 9.67 5.146 7.191a10.628 10.628 0 0 1-1.005-1.384c2.34 2.142 6.038 4.83 7.365 5.576C8.69 8.408 6.208 4.743 6.324 4.86c4.436 4.47 8.528 6.996 8.528 6.996.154.085.27.154.36.213.085-.215.16-.437.224-.668.708-2.588-.09-5.548-1.893-7.992z"
       />
     </svg>
   )
@@ -187,17 +248,28 @@ export function FlutterIcon() {
   )
 }
 
+// Kotlin Multiplatform's official mark (developer.android.com/static/images/picto-icons/kmp.svg).
 export function KmpIcon() {
   return (
-    <svg viewBox="0 0 28 28" width="28" height="28" aria-hidden="true">
+    <svg viewBox="0 0 48 48" width="28" height="28" fill="none" aria-hidden="true">
       <defs>
-        <linearGradient id="platform-kmp" x1="3" y1="3" x2="25" y2="25" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#c711e1" />
-          <stop offset="1" stopColor="#7f52ff" />
-        </linearGradient>
+        <radialGradient
+          id="platform-kmp"
+          cx="0"
+          cy="0"
+          r="1"
+          gradientTransform="rotate(135 20.814 11.259) scale(61.5)"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop stopColor="#37bcfd" />
+          <stop offset="0.58" stopColor="#7f52ff" />
+          <stop offset="1" stopColor="#c711e1" />
+        </radialGradient>
       </defs>
-      <rect x="3" y="3" width="14" height="14" rx="4" fill="url(#platform-kmp)" opacity="0.55" />
-      <rect x="11" y="11" width="14" height="14" rx="4" fill="url(#platform-kmp)" />
+      <path
+        fill="url(#platform-kmp)"
+        d="M0 22.563V.083l22.48 22.48H0Zm0 2.874V48h.057L22.62 25.437H0Zm25.99-3.428L48 0H3.981l22.01 22.01Zm.03 4.094L4.121 48h43.794L26.02 26.103Z"
+      />
     </svg>
   )
 }
@@ -209,6 +281,24 @@ export function ReactIcon() {
       <ellipse cx="14" cy="14" rx="11" ry="4.3" />
       <ellipse cx="14" cy="14" rx="11" ry="4.3" transform="rotate(60 14 14)" />
       <ellipse cx="14" cy="14" rx="11" ry="4.3" transform="rotate(120 14 14)" />
+    </svg>
+  )
+}
+
+// Generic globe mark for backend APIs / dynamic websites — not tied to a
+// single framework, so no brand colors, just the platform accent.
+export function WebIcon() {
+  return (
+    <svg viewBox="0 0 28 28" width="28" height="28" fill="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="platform-web" x1="2" y1="2" x2="26" y2="26" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#38bdf8" />
+          <stop offset="1" stopColor="#6366f1" />
+        </linearGradient>
+      </defs>
+      <circle cx="14" cy="14" r="10.5" stroke="url(#platform-web)" strokeWidth="1.6" />
+      <path d="M3.5 14h21M14 3.5c-4 0-7 4.7-7 10.5s3 10.5 7 10.5 7-4.7 7-10.5-3-10.5-7-10.5z" stroke="url(#platform-web)" strokeWidth="1.3" />
+      <path d="M4.7 9h18.6M4.7 19h18.6" stroke="url(#platform-web)" strokeWidth="1.1" />
     </svg>
   )
 }

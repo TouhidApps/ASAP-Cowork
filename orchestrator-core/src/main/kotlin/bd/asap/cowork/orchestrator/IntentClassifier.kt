@@ -32,7 +32,12 @@ class IntentClassifier(private val providers: LlmProviderRegistry) {
 
         val messages = history.map { it.toChatMessage() } + ChatMessage(ChatRole.USER, input)
         val reply = StringBuilder()
-        providers.current().streamComplete(systemPrompt, messages).collect { reply.append(it) }
+        // fast = true: picking one capability id from a list is a trivial
+        // classification task that doesn't need the flagship model, and this
+        // roster system prompt is identical on every call in the app (see
+        // AnthropicLlmProvider's cache_control on system prompts), so the fast
+        // model + cache combo is what keeps this cheap on every single message.
+        providers.current().streamComplete(systemPrompt, messages, fast = true).collect { reply.append(it) }
 
         val known = candidates.flatMap { it.capabilities }
         return known.firstOrNull { it.id in reply.toString() } ?: known.first()

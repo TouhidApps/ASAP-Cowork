@@ -6,6 +6,7 @@ import com.google.genai.errors.GenAiIOException
 import com.google.genai.types.Content
 import com.google.genai.types.FunctionDeclaration
 import com.google.genai.types.GenerateContentConfig
+import com.google.genai.types.GenerateContentResponseUsageMetadata
 import com.google.genai.types.Part
 import com.google.genai.types.Tool
 import kotlinx.coroutines.Dispatchers
@@ -24,7 +25,10 @@ import java.util.Base64
 class GeminiLlmProvider(
     private val apiKeyProvider: () -> String?,
     private val model: String = "gemini-3.1-pro-preview",
+    /** Used instead of [model] when a call passes `fast = true` (e.g. intent classification) — a short routing/classification decision doesn't need the flagship model's cost. */
+    private val fastModel: String = "gemini-3.1-flash-preview",
     private val maxTokens: Int = 4096,
+    private val usageListener: UsageListener = UsageListener {},
 ) : LlmProvider {
     override val id: String = "gemini"
 
@@ -34,17 +38,20 @@ class GeminiLlmProvider(
         return Client.builder().apiKey(apiKey).build()
     }
 
-    override fun streamComplete(systemPrompt: String?, messages: List<ChatMessage>): Flow<String> = flow {
+    override fun streamComplete(systemPrompt: String?, messages: List<ChatMessage>, fast: Boolean): Flow<String> = flow {
         val client = client()
+        val effectiveModel = if (fast) fastModel else model
         val configBuilder = GenerateContentConfig.builder().maxOutputTokens(maxTokens)
         if (systemPrompt != null) {
             configBuilder.systemInstruction(Content.fromParts(Part.fromText(systemPrompt)))
         }
         val contents = messages.map { it.toContent() }
 
+        var lastUsage: GenerateContentResponseUsageMetadata? = null
         try {
-            client.models.generateContentStream(model, contents, configBuilder.build()).use { stream ->
+            client.models.generateContentStream(effectiveModel, contents, configBuilder.build()).use { stream ->
                 for (chunk in stream) {
+                    chunk.usageMetadata().ifPresent { lastUsage = it }
                     chunk.parts()?.forEach { part ->
                         part.text().orElse(null)?.let { text -> emit(text) }
                     }
@@ -55,6 +62,7 @@ class GeminiLlmProvider(
         } catch (e: GenAiIOException) {
             throw LlmProviderException("Gemini request failed: ${e.message}", e)
         }
+        recordUsage(lastUsage, effectiveModel)
     }.flowOn(Dispatchers.IO)
 
     override fun runAgenticLoop(
@@ -86,10 +94,12 @@ class GeminiLlmProvider(
         repeat(MAX_TOOL_ITERATIONS) {
             val allParts = mutableListOf<Part>()
             val functionCalls = mutableListOf<com.google.genai.types.FunctionCall>()
+            var lastUsage: GenerateContentResponseUsageMetadata? = null
 
             try {
                 client.models.generateContentStream(model, messages, config).use { stream ->
                     for (chunk in stream) {
+                        chunk.usageMetadata().ifPresent { lastUsage = it }
                         val parts = chunk.parts()?.toList() ?: emptyList()
                         allParts += parts
                         parts.forEach { part ->
@@ -103,6 +113,7 @@ class GeminiLlmProvider(
             } catch (e: GenAiIOException) {
                 throw LlmProviderException("Gemini request failed: ${e.message}", e)
             }
+            recordUsage(lastUsage, model)
 
             if (functionCalls.isEmpty()) {
                 return@channelFlow
@@ -136,6 +147,18 @@ class GeminiLlmProvider(
 
         send(AgentStreamEvent.TextDelta("\n\n(Reached the tool-call limit before finishing.)"))
     }.flowOn(Dispatchers.IO)
+
+    private suspend fun recordUsage(usage: GenerateContentResponseUsageMetadata?, modelUsed: String) {
+        if (usage == null) return
+        usageListener.onUsage(
+            LlmUsage(
+                providerId = id,
+                model = modelUsed,
+                inputTokens = usage.promptTokenCount().orElse(0).toLong(),
+                outputTokens = usage.candidatesTokenCount().orElse(0).toLong(),
+            ),
+        )
+    }
 
     private fun ChatMessage.toContent(): Content =
         Content.builder().role(if (role == ChatRole.ASSISTANT) "model" else "user").parts(Part.fromText(content)).build()

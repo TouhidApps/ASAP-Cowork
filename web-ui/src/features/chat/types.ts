@@ -28,6 +28,11 @@ export interface ToolActivity {
   status: 'started' | 'finished' | 'failed'
 }
 
+/** A saved note the orchestrator's notes pre-step found and folded into this reply's task — mirrors AgentEvent.NoteUsed. Client-only, never persisted. */
+export interface NoteUsed {
+  snippet: string
+}
+
 /** A screenshot/video (or attached image) opened full-size in MediaLightbox, tracked by MessageList. */
 export interface OpenMedia {
   kind: 'image' | 'video'
@@ -51,6 +56,8 @@ export interface ChatMessage {
   attachments?: Attachment[]
   /** Tool calls seen so far while this message streams (e.g. "Running Gradle: assembleDebug"), from `tool_activity` events. */
   toolActivity?: ToolActivity[]
+  /** Saved notes the orchestrator folded into this reply's task, from `note_used` events. */
+  notesUsed?: NoteUsed[]
 }
 
 /** Wire shape chat-gateway streams over `/ws/chat` — mirrors ChatEvent (WireEvents.kt). */
@@ -61,6 +68,7 @@ export interface ChatEvent {
     | 'text_delta'
     | 'file_changed'
     | 'tool_activity'
+    | 'note_used'
     | 'result'
     | 'error'
     | 'conversation_started'

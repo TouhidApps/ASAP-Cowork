@@ -82,6 +82,7 @@ dependencies {
     implementation(project(":agents:performance-agent"))
     implementation(project(":agents:publishing-agent"))
     implementation(project(":agents:notes-agent"))
+    implementation(project(":agents:workspace-agent"))
 
     implementation("io.ktor:ktor-server-core")
     implementation("io.ktor:ktor-server-netty")

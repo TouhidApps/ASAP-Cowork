@@ -46,6 +46,8 @@ object FlutterBuildTool {
             return ToolResult("No pubspec.yaml found in $directory — run create_flutter_project first.", isError = true)
         }
 
+        clearQuarantineOnEngineArtifacts()
+
         val (success, output) = ProcessRunner.run(
             command = listOf("flutter") + command.split(Regex("\\s+")),
             workDir = projectDir,
@@ -59,5 +61,27 @@ object FlutterBuildTool {
             extraEnv = DeviceTargeting.resolveSerial()?.let { mapOf("ANDROID_SERIAL" to it) } ?: emptyMap(),
         )
         return ToolResult(output, isError = !success)
+    }
+
+    /**
+     * macOS-only. Flutter's engine artifacts (impellerc, gen_snapshot, ...)
+     * are fetched over HTTPS, so they land on disk tagged
+     * com.apple.quarantine. Gatekeeper pops its "downloaded from the
+     * Internet" dialog the first time each one actually runs post-
+     * (re)extraction — e.g. `flutter clean` wipes the cached shader output
+     * in `.dart_tool/`, forcing impellerc to run again. That's a modal GUI
+     * dialog nothing in this headless pipeline can dismiss, so the flag is
+     * stripped proactively before every flutter invocation rather than
+     * risking a build that hangs waiting for someone to click "Open".
+     */
+    private fun clearQuarantineOnEngineArtifacts() {
+        val flutterSdkPath = ToolchainPathsRegistry.current().flutterSdkPath ?: return
+        if (!System.getProperty("os.name").orEmpty().contains("Mac", ignoreCase = true)) return
+        runCatching {
+            ProcessBuilder("xattr", "-dr", "com.apple.quarantine", "$flutterSdkPath/bin/cache")
+                .redirectErrorStream(true)
+                .start()
+                .waitFor()
+        }
     }
 }

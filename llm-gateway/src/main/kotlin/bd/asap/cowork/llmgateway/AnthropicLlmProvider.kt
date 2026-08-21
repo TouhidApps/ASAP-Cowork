@@ -5,6 +5,7 @@ import com.anthropic.client.okhttp.AnthropicOkHttpClient
 import com.anthropic.core.JsonValue
 import com.anthropic.helpers.MessageAccumulator
 import com.anthropic.models.messages.Base64ImageSource
+import com.anthropic.models.messages.CacheControlEphemeral
 import com.anthropic.models.messages.ContentBlockParam
 import com.anthropic.models.messages.ImageBlockParam
 import com.anthropic.models.messages.MessageCreateParams
@@ -33,7 +34,10 @@ import kotlinx.coroutines.flow.flowOn
 class AnthropicLlmProvider(
     private val apiKeyProvider: () -> String? = { null },
     private val model: String = "claude-opus-5",
+    /** Used instead of [model] when a call passes `fast = true` (e.g. intent classification) — a short routing/classification decision doesn't need the flagship model's cost. */
+    private val fastModel: String = "claude-haiku-4-5-20251001",
     private val maxTokens: Long = 8000,
+    private val usageListener: UsageListener = UsageListener {},
 ) : LlmProvider {
     override val id: String = "anthropic"
 
@@ -46,14 +50,19 @@ class AnthropicLlmProvider(
         }
     }
 
-    override fun streamComplete(systemPrompt: String?, messages: List<ChatMessage>): Flow<String> =
+    override fun streamComplete(systemPrompt: String?, messages: List<ChatMessage>, fast: Boolean): Flow<String> =
         channelFlow {
             val builder = MessageCreateParams.builder()
-                .model(model)
+                .model(if (fast) fastModel else model)
                 .maxTokens(maxTokens)
 
             if (systemPrompt != null) {
-                builder.system(systemPrompt)
+                // Cache-eligible so a system prompt reused across calls (e.g. the
+                // classifier's roster, sent on every message) is billed at the
+                // ~10% cached-read rate instead of full price after the first hit.
+                builder.systemOfTextBlockParams(
+                    listOf(TextBlockParam.builder().text(systemPrompt).cacheControl(CacheControlEphemeral.builder().build()).build()),
+                )
             }
             for (message in messages) {
                 when (message.role) {
@@ -62,8 +71,10 @@ class AnthropicLlmProvider(
                 }
             }
 
+            val accumulator = MessageAccumulator.create()
             client().messages().createStreaming(builder.build()).use { streamResponse ->
                 streamResponse.stream().forEach { event ->
+                    accumulator.accumulate(event)
                     event.contentBlockDelta().ifPresent { contentBlockDelta ->
                         contentBlockDelta.delta().text().ifPresent { textDelta ->
                             trySend(textDelta.text())
@@ -71,6 +82,7 @@ class AnthropicLlmProvider(
                     }
                 }
             }
+            recordUsage(accumulator, if (fast) fastModel else model)
         }.flowOn(Dispatchers.IO)
 
     override fun runAgenticLoop(
@@ -82,13 +94,13 @@ class AnthropicLlmProvider(
         images: List<ImageAttachment>,
         history: List<ChatMessage>,
     ): Flow<AgentStreamEvent> = channelFlow {
-        val toolDefinitions = tools.map { spec ->
+        val toolDefinitions = tools.mapIndexed { index, spec ->
             @Suppress("UNCHECKED_CAST")
             val properties = spec.parametersSchema["properties"] as? Map<String, Any?> ?: emptyMap()
             @Suppress("UNCHECKED_CAST")
             val required = spec.parametersSchema["required"] as? List<String> ?: emptyList()
 
-            Tool.builder()
+            val builder = Tool.builder()
                 .name(spec.name)
                 .description(spec.description)
                 .inputSchema(
@@ -102,7 +114,15 @@ class AnthropicLlmProvider(
                         .required(required)
                         .build(),
                 )
-                .build()
+            // A cache breakpoint on the last tool caches the whole system+tools
+            // prefix that precedes it. Every one of this agent's tool schemas is
+            // static across the loop's iterations (below) and across turns in the
+            // same conversation, so without this every iteration/turn re-pays full
+            // price for tool definitions that never change.
+            if (index == tools.lastIndex) {
+                builder.cacheControl(CacheControlEphemeral.builder().build())
+            }
+            builder.build()
         }
 
         val initialMessage = MessageParam.builder().role(MessageParam.Role.USER)
@@ -121,7 +141,9 @@ class AnthropicLlmProvider(
             val builder = MessageCreateParams.builder()
                 .model(model)
                 .maxTokens(maxTokens)
-                .system(systemPrompt)
+                .systemOfTextBlockParams(
+                    listOf(TextBlockParam.builder().text(systemPrompt).cacheControl(CacheControlEphemeral.builder().build()).build()),
+                )
                 .messages(messages)
             toolDefinitions.forEach { builder.addTool(it) }
 
@@ -135,6 +157,7 @@ class AnthropicLlmProvider(
             }
 
             val finalMessage = accumulator.message()
+            recordUsage(accumulator, model)
             if (finalMessage.stopReason().orElse(null) != StopReason.TOOL_USE) {
                 return@channelFlow
             }
@@ -173,6 +196,11 @@ class AnthropicLlmProvider(
 
         send(AgentStreamEvent.TextDelta("\n\n(Reached the tool-call limit before finishing.)"))
     }.flowOn(Dispatchers.IO)
+
+    private suspend fun recordUsage(accumulator: MessageAccumulator, modelUsed: String) {
+        val usage = accumulator.message().usage()
+        usageListener.onUsage(LlmUsage(id, modelUsed, usage.inputTokens(), usage.outputTokens()))
+    }
 
     private fun ImageAttachment.toContentBlock(): ContentBlockParam =
         ContentBlockParam.ofImage(

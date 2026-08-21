@@ -6,6 +6,7 @@ import com.openai.models.ChatModel
 import com.openai.models.ReasoningEffort
 import com.openai.models.chat.completions.ChatCompletionAssistantMessageParam
 import com.openai.models.chat.completions.ChatCompletionCreateParams
+import com.openai.models.chat.completions.ChatCompletionStreamOptions
 import com.openai.models.chat.completions.ChatCompletionSystemMessageParam
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -23,7 +24,10 @@ import kotlinx.coroutines.flow.flowOn
 class OpenAiLlmProvider(
     private val apiKeyProvider: () -> String?,
     private val model: ChatModel = ChatModel.GPT_5_6_SOL,
+    /** Used instead of [model] when a call passes `fast = true` (e.g. intent classification) — a short routing/classification decision doesn't need the flagship model's cost. */
+    private val fastModel: ChatModel = ChatModel.GPT_5_4_MINI,
     private val maxTokens: Long = 4096,
+    private val usageListener: UsageListener = UsageListener {},
 ) : LlmProvider {
     override val id: String = "openai"
 
@@ -33,10 +37,12 @@ class OpenAiLlmProvider(
         return OpenAIOkHttpClient.builder().apiKey(apiKey).build()
     }
 
-    override fun streamComplete(systemPrompt: String?, messages: List<ChatMessage>): Flow<String> = flow {
+    override fun streamComplete(systemPrompt: String?, messages: List<ChatMessage>, fast: Boolean): Flow<String> = flow {
+        val effectiveModel = if (fast) fastModel else model
         val builder = ChatCompletionCreateParams.builder()
-            .model(model)
+            .model(effectiveModel)
             .maxCompletionTokens(maxTokens)
+            .streamOptions(ChatCompletionStreamOptions.builder().includeUsage(true).build())
 
         if (systemPrompt != null) {
             builder.addMessage(ChatCompletionSystemMessageParam.builder().content(systemPrompt).build())
@@ -49,13 +55,17 @@ class OpenAiLlmProvider(
             }
         }
 
+        var lastUsage: com.openai.models.completions.CompletionUsage? = null
         client().chat().completions().createStreaming(builder.build()).use { response ->
             val iterator = response.stream().iterator()
             while (iterator.hasNext()) {
-                val choice = iterator.next().choices().firstOrNull() ?: continue
+                val chunk = iterator.next()
+                chunk.usage().ifPresent { lastUsage = it }
+                val choice = chunk.choices().firstOrNull() ?: continue
                 choice.delta().content().orElse(null)?.let { text -> emit(text) }
             }
         }
+        lastUsage?.let { usage -> usageListener.onUsage(LlmUsage(id, effectiveModel.asString(), usage.promptTokens(), usage.completionTokens())) }
     }.flowOn(Dispatchers.IO)
 
     override fun runAgenticLoop(
@@ -78,6 +88,9 @@ class OpenAiLlmProvider(
                 describe = describe,
                 images = images,
                 history = history,
+                providerId = id,
+                modelName = model.asString(),
+                usageListener = usageListener,
             ) {
                 model(model)
                 maxCompletionTokens(maxTokens)

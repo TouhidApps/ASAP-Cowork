@@ -37,6 +37,7 @@ fun AgentEvent.toWire(): ChatEvent = when (this) {
     is AgentEvent.FileChanged -> ChatEvent(type = "file_changed", path = path, message = summary)
     is AgentEvent.ToolActivity ->
         ChatEvent(type = "tool_activity", tool = tool, message = label, status = status.name.lowercase())
+    is AgentEvent.NoteUsed -> ChatEvent(type = "note_used", message = snippet)
     is AgentEvent.Result -> ChatEvent(type = "result", message = summary)
     is AgentEvent.Error -> ChatEvent(type = "error", message = message)
 }

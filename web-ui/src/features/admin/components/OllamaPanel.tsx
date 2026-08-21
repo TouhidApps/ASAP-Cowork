@@ -228,6 +228,11 @@ export function OllamaPanel() {
                       />
                       {m.name}
                       <span style={{ opacity: 0.6, fontSize: 12 }}>({(m.sizeBytes / 1e9).toFixed(1)} GB)</span>
+                      {!m.supportsTools && (
+                        <span style={{ color: '#d94f4f', fontSize: 12 }} title="This model can't call tools, so it can't read or write anything in your workspace — chat-only.">
+                          ⚠ no tool support
+                        </span>
+                      )}
                     </label>
                     <button
                       onClick={() => handleDelete(m.name)}
@@ -276,6 +281,14 @@ export function OllamaPanel() {
                         ~{formatGb(m.approxSizeGb)} download, needs {formatGb(m.minRamGb)}+ RAM
                         {!m.fitsSystemMemory ? ' — may be too much for this machine' : ''}
                       </span>
+                      {!m.supportsTools && (
+                        <span
+                          style={{ color: '#d94f4f', fontSize: 12, marginLeft: 8 }}
+                          title="This model can't call tools, so it can't read or write anything in your workspace — chat-only."
+                        >
+                          ⚠ no tool support
+                        </span>
+                      )}
                     </span>
                     {alreadyInstalled ? (
                       <span style={{ fontSize: 12, opacity: 0.7 }}>Installed</span>

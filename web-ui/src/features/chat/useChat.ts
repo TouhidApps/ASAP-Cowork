@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchConversationMessages, fetchConversations } from '@/features/chat/api'
-import type { Attachment, ChatEvent, ChatMessage, ChatStage, Conversation, ToolActivity } from '@/features/chat/types'
+import type { Attachment, ChatEvent, ChatMessage, ChatStage, Conversation, NoteUsed, ToolActivity } from '@/features/chat/types'
 
 interface ChatState {
   conversations: Conversation[]
@@ -217,6 +217,17 @@ export function useChat() {
                     : [...existing, activity]
                 return { ...m, toolActivity: updated }
               }),
+            }))
+            break
+          }
+          case 'note_used': {
+            const id = ensureStreamingId()
+            const noteUsed: NoteUsed = { snippet: parsed.message ?? '' }
+            setState((s) => ({
+              ...s,
+              messages: withStreamingMessage(s.messages, id).map((m) =>
+                m.id === id ? { ...m, notesUsed: [...(m.notesUsed ?? []), noteUsed] } : m,
+              ),
             }))
             break
           }

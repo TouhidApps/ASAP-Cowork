@@ -23,6 +23,7 @@ import bd.asap.cowork.agents.security.SecurityReviewAgent
 import bd.asap.cowork.agents.storeasset.StoreAssetAgent
 import bd.asap.cowork.agents.techstack.TechStackAgent
 import bd.asap.cowork.agents.testing.TestingAgent
+import bd.asap.cowork.agents.workspace.WorkspaceAgent
 import bd.asap.cowork.chatgateway.config.DotEnv
 import bd.asap.cowork.chatgateway.config.FirebaseCredentialsStore
 import bd.asap.cowork.chatgateway.config.ProviderCredentialsStore
@@ -34,8 +35,13 @@ import bd.asap.cowork.chatgateway.features.admin.FirebaseService
 import bd.asap.cowork.chatgateway.features.admin.AllowedHostsService
 import bd.asap.cowork.chatgateway.features.admin.OllamaAdminService
 import bd.asap.cowork.chatgateway.features.admin.ToolchainService
+import bd.asap.cowork.chatgateway.features.admin.UsageService
 import bd.asap.cowork.chatgateway.features.admin.WorkspaceService
 import bd.asap.cowork.chatgateway.features.notes.NoteService
+import bd.asap.cowork.chatgateway.features.plan.PlanService
+import bd.asap.cowork.chatgateway.features.project.ProjectFilesService
+import bd.asap.cowork.contextstore.ApiUsageRecord
+import bd.asap.cowork.contextstore.ApiUsageRepository
 import bd.asap.cowork.contextstore.ContextDatabase
 import bd.asap.cowork.contextstore.ConversationRepository
 import bd.asap.cowork.contextstore.NoteRepository
@@ -44,8 +50,10 @@ import bd.asap.cowork.firebase.FirebaseCredentialsRegistry
 import bd.asap.cowork.llmgateway.AnthropicLlmProvider
 import bd.asap.cowork.llmgateway.GeminiLlmProvider
 import bd.asap.cowork.llmgateway.LlmProviderRegistry
+import bd.asap.cowork.llmgateway.LlmUsage
 import bd.asap.cowork.llmgateway.OllamaLlmProvider
 import bd.asap.cowork.llmgateway.OpenAiLlmProvider
+import bd.asap.cowork.llmgateway.UsageListener
 import bd.asap.cowork.orchestrator.AgentRegistry
 import bd.asap.cowork.orchestrator.IntentClassifier
 import bd.asap.cowork.orchestrator.Orchestrator
@@ -73,9 +81,26 @@ fun appModule(contextDatabase: ContextDatabase) = module {
     single { ConversationRepository(get()) }
     single { NoteService(get()) }
     single { ProviderCredentialsStore(get()) }
-    single { AnthropicLlmProvider(apiKeyProvider = { DotEnv.get("ANTHROPIC_API_KEY") }) }
-    single { OpenAiLlmProvider(apiKeyProvider = { DotEnv.get("OPENAI_API_KEY") }) }
-    single { GeminiLlmProvider(apiKeyProvider = { DotEnv.get("GEMINI_API_KEY") }) }
+    single { ApiUsageRepository(get()) }
+    single {
+        // Shared by every provider single below — persists straight to SQLite so the admin
+        // panel's usage tab has real data with no llm-gateway -> context-store dependency (see
+        // UsageListener's doc comment).
+        val repository = get<ApiUsageRepository>()
+        UsageListener { usage: LlmUsage ->
+            repository.record(
+                ApiUsageRecord(
+                    provider = usage.providerId,
+                    model = usage.model,
+                    inputTokens = usage.inputTokens,
+                    outputTokens = usage.outputTokens,
+                ),
+            )
+        }
+    }
+    single { AnthropicLlmProvider(apiKeyProvider = { DotEnv.get("ANTHROPIC_API_KEY") }, usageListener = get()) }
+    single { OpenAiLlmProvider(apiKeyProvider = { DotEnv.get("OPENAI_API_KEY") }, usageListener = get()) }
+    single { GeminiLlmProvider(apiKeyProvider = { DotEnv.get("GEMINI_API_KEY") }, usageListener = get()) }
     single {
         OllamaLlmProvider(
             hostProvider = { DotEnv.get("OLLAMA_HOST") ?: OllamaLlmProvider.DEFAULT_HOST },
@@ -84,6 +109,7 @@ fun appModule(contextDatabase: ContextDatabase) = module {
             // this is the one source of truth — no separate DB-persisted
             // override to layer on top of it.
             initialModel = { DotEnv.get("OLLAMA_MODEL") ?: OllamaLlmProvider.DEFAULT_MODEL },
+            usageListener = get(),
         )
     }
     single {
@@ -107,6 +133,8 @@ fun appModule(contextDatabase: ContextDatabase) = module {
         ProjectContext(initialRoot)
     }
     single { WorkspaceHistoryService(get()) }
+    single { PlanService(get()) }
+    single { ProjectFilesService(get()) }
     single(createdAtStart = true) {
         val store = ToolchainSettingsStore(get())
         // Eager (createdAtStart) so ToolchainPathsRegistry is seeded at
@@ -145,6 +173,7 @@ fun appModule(contextDatabase: ContextDatabase) = module {
             register(PerformanceAgent(get()))
             register(PublishingAgent(get()))
             register(NotesAgent(get(), get()))
+            register(WorkspaceAgent())
         }
     }
     single { IntentClassifier(get()) }
@@ -155,6 +184,7 @@ fun appModule(contextDatabase: ContextDatabase) = module {
     single { FirebaseCliService() }
     single { OllamaAdminService(get()) }
     single { AllowedHostsService() }
+    single { UsageService(get()) }
     single { AdminService(get(), get(), get(), get(), get()) }
 }
 

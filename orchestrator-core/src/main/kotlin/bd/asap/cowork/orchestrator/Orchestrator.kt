@@ -85,7 +85,9 @@ class Orchestrator(
      * The pre-step's tool activity is forwarded via [emit] so the UI still
      * shows the search happening, but its text reply is deliberately not
      * forwarded — only the target agent's own reply should appear as the
-     * visible chat message.
+     * visible chat message. When a match is actually folded in, an
+     * [AgentEvent.NoteUsed] is also emitted so the UI can badge the reply as
+     * having used a saved note.
      */
     private suspend fun withNotesContext(
         input: String,
@@ -109,6 +111,7 @@ class Orchestrator(
         return if (found.isBlank() || found.contains(NO_NOTE_MATCH, ignoreCase = true)) {
             input
         } else {
+            emit(AgentEvent.NoteUsed(snippet = found.toString().trim().take(SNIPPET_LENGTH)))
             "$input\n\n[Found in your saved notes]\n$found"
         }
     }
@@ -118,5 +121,6 @@ class Orchestrator(
             "note", "notes", "password", "credential", "secret", "api key", "apikey", "token", "keystore",
         )
         const val NO_NOTE_MATCH = "no matching note"
+        const val SNIPPET_LENGTH = 80
     }
 }

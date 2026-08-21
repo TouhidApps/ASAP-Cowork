@@ -21,6 +21,9 @@ sealed interface AgentEvent {
     /** A file the agent created or modified. */
     data class FileChanged(val path: String, val summary: String) : AgentEvent
 
+    /** Orchestrator's notes pre-step found a matching note and folded it into the task — lets the UI show a "used a saved note" badge on the reply instead of the lookup being invisible. [snippet] is a short preview of the matched content, not the full note. */
+    data class NoteUsed(val snippet: String) : AgentEvent
+
     /** Terminal success event — exactly one per task, always last on success. */
     data class Result(val summary: String) : AgentEvent
 

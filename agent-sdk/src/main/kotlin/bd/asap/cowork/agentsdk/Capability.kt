@@ -31,5 +31,6 @@ value class Capability(val id: String) {
         val SECURITY = Capability("security")
         val PERFORMANCE = Capability("performance")
         val NOTES = Capability("notes")
+        val WORKSPACE = Capability("workspace")
     }
 }

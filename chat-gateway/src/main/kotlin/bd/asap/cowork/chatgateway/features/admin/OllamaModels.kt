@@ -6,6 +6,8 @@ import kotlinx.serialization.Serializable
 data class OllamaModelInfo(
     val name: String,
     val sizeBytes: Long,
+    /** Whether Ollama reports "tools" in this model's capabilities (via `/api/show`) — models without it (e.g. the gemma3 family) reject any tool-enabled chat request outright, which breaks every agent that reads/writes the workspace. */
+    val supportsTools: Boolean = true,
 )
 
 @Serializable
@@ -15,6 +17,7 @@ data class SuggestedOllamaModel(
     val minRamGb: Double,
     val recommended: Boolean,
     val fitsSystemMemory: Boolean,
+    val supportsTools: Boolean,
 )
 
 @Serializable

@@ -86,6 +86,7 @@ export interface ListFirebaseAppsResult {
 export interface OllamaModelInfo {
   name: string
   sizeBytes: number
+  supportsTools: boolean
 }
 
 export interface SuggestedOllamaModel {
@@ -94,6 +95,7 @@ export interface SuggestedOllamaModel {
   minRamGb: number
   recommended: boolean
   fitsSystemMemory: boolean
+  supportsTools: boolean
 }
 
 export interface OllamaPullProgress {

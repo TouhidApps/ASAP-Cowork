@@ -33,4 +33,5 @@ include(
     ":agents:performance-agent",
     ":agents:publishing-agent",
     ":agents:notes-agent",
+    ":agents:workspace-agent",
 )

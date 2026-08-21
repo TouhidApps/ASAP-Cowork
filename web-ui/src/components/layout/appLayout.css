@@ -75,6 +75,16 @@
   box-shadow: var(--shadow);
 }
 
+.app-tab-pane {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.app-tab-pane[hidden] {
+  display: none;
+}
+
 @media (max-width: 640px) {
   .app-header {
     padding: 8px 12px;

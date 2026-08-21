@@ -1,5 +1,7 @@
-import { Link, NavLink, Outlet } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import { ConnectionStatus } from '@/components/ConnectionStatus'
+import { ChatPage } from '@/pages/ChatPage'
+import { NotesPage } from '@/pages/NotesPage'
 import '@/components/layout/appLayout.css'
 
 const navItems = [
@@ -9,6 +11,9 @@ const navItems = [
 ]
 
 export function AppLayout() {
+  const location = useLocation()
+  const isNotes = location.pathname === '/notes'
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
       <header className="app-header">
@@ -34,7 +39,16 @@ export function AppLayout() {
         </nav>
       </header>
       <main style={{ flex: 1, padding: '12px 24px 24px', display: 'flex', minHeight: 0 }}>
-        <Outlet />
+        {/* Both tabs stay mounted and are only hidden via CSS, rather than
+            swapped through an <Outlet/>, so switching tabs doesn't unmount
+            ChatPage — that would tear down its WebSocket connection and
+            reset the chat scroll position every time. */}
+        <div className="app-tab-pane" hidden={isNotes}>
+          <ChatPage />
+        </div>
+        <div className="app-tab-pane" hidden={!isNotes}>
+          <NotesPage />
+        </div>
       </main>
     </div>
   )

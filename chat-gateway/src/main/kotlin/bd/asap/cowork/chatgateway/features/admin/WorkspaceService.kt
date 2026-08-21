@@ -64,7 +64,9 @@ class WorkspaceService(
     }
 
     fun backupItems(): BackupItemsResponse =
-        BackupItemsResponse(items = STORAGE_CATEGORIES.map { (name, label, _) -> BackupItem(name, label) })
+        BackupItemsResponse(
+            items = STORAGE_CATEGORIES.map { (name, label, _) -> BackupItem(name, label) } + PROJECT_BACKUP_ITEM,
+        )
 
     /**
      * Zips the selected categories into a timestamped .zip in [destination].
@@ -84,8 +86,11 @@ class WorkspaceService(
             throw AppException.BadRequest("Backup destination can't be inside the workspace")
         }
 
-        val selected = STORAGE_CATEGORIES.filter { it.first in items }
-        if (selected.isEmpty()) throw AppException.BadRequest("Unknown backup item(s): $items")
+        val includeProject = PROJECT_BACKUP_ITEM.name in items
+        val selectedCategories = STORAGE_CATEGORIES.filter { it.first in items }
+        if (selectedCategories.isEmpty() && !includeProject) {
+            throw AppException.BadRequest("Unknown backup item(s): $items")
+        }
 
         val timestamp = SimpleDateFormat("yyyyMMdd-HHmmss").format(Date())
         val zipFile = File(destDir, "asap-backup-$timestamp.zip")
@@ -93,7 +98,7 @@ class WorkspaceService(
         var fileCount = 0
         var totalBytes = 0L
         ZipOutputStream(zipFile.outputStream()).use { zip ->
-            selected.forEach { (_, _, dirName) ->
+            selectedCategories.forEach { (_, _, dirName) ->
                 File(workspaceRoot, dirName).listFiles()?.filter { it.isFile }?.forEach { file ->
                     zip.putNextEntry(ZipEntry("$dirName/${file.name}"))
                     file.inputStream().use { it.copyTo(zip) }
@@ -102,9 +107,45 @@ class WorkspaceService(
                     totalBytes += file.length()
                 }
             }
+            if (includeProject) {
+                val (projectFiles, projectBytes) = addProjectFiles(zip, workspaceRoot)
+                fileCount += projectFiles
+                totalBytes += projectBytes
+            }
         }
 
         return BackupResult(zipPath = zipFile.absolutePath, fileCount = fileCount, totalBytes = totalBytes)
+    }
+
+    /**
+     * Walks the whole project tree into the zip under a "project/" prefix,
+     * skipping directories that are either regenerable build/dependency
+     * output (build/, .dart_tool/, .gradle/, node_modules/, Pods/,
+     * DerivedData/ — across Flutter, Android/KMP, and React Native/iOS
+     * alike, these are what actually make a project directory huge, and
+     * `flutter clean`/`gradle clean` just delete the same directories under
+     * the hood) or already covered by their own backup category above
+     * (.asap-screenshots/.asap-videos/.asap-builds) — excluding them here
+     * shrinks the backup exactly like a "clean" would, without mutating the
+     * live project on disk the way actually running those clean commands
+     * would (which would leave the workspace unbuildable until a rebuild).
+     */
+    private fun addProjectFiles(zip: ZipOutputStream, workspaceRoot: File): Pair<Int, Long> {
+        var fileCount = 0
+        var totalBytes = 0L
+        val rootPath = workspaceRoot.toPath()
+        workspaceRoot.walkTopDown()
+            .onEnter { dir -> dir.name !in EXCLUDED_PROJECT_DIR_NAMES && !dir.name.startsWith(".asap-") }
+            .filter { it.isFile }
+            .forEach { file ->
+                val relative = rootPath.relativize(file.toPath()).toString().replace(File.separatorChar, '/')
+                zip.putNextEntry(ZipEntry("project/$relative"))
+                file.inputStream().use { it.copyTo(zip) }
+                zip.closeEntry()
+                fileCount++
+                totalBytes += file.length()
+            }
+        return fileCount to totalBytes
     }
 
     private companion object {
@@ -113,5 +154,7 @@ class WorkspaceService(
             Triple("videos", "Videos", ".asap-videos"),
             Triple("builds", "Built APKs", ".asap-builds"),
         )
+        val PROJECT_BACKUP_ITEM = BackupItem("project", "Project files (app source, excluding build/deps)")
+        val EXCLUDED_PROJECT_DIR_NAMES = setOf("build", ".dart_tool", ".gradle", "node_modules", "Pods", "DerivedData")
     }
 }

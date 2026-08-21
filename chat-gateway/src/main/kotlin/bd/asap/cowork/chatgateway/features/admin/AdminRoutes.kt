@@ -25,6 +25,7 @@ fun Route.adminRoutes() {
     val firebaseCliService by inject<FirebaseCliService>()
     val ollamaAdminService by inject<OllamaAdminService>()
     val allowedHostsService by inject<AllowedHostsService>()
+    val usageService by inject<UsageService>()
 
     route("/api/v1/admin") {
         install(AdminAuth)
@@ -136,6 +137,13 @@ fun Route.adminRoutes() {
 
         get("/status") {
             call.respond(ApiResponse.ok(adminService.status()))
+        }
+
+        get("/usage") {
+            val from = call.request.queryParameters["from"]?.toLongOrNull()
+            val to = call.request.queryParameters["to"]?.toLongOrNull()
+            val provider = call.request.queryParameters["provider"]?.takeIf { it.isNotBlank() }
+            call.respond(ApiResponse.ok(usageService.summary(from, to, provider)))
         }
 
         get("/conversations") {

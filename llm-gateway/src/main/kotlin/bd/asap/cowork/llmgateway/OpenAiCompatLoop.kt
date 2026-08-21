@@ -13,9 +13,11 @@ import com.openai.models.chat.completions.ChatCompletionContentPartText
 import com.openai.models.chat.completions.ChatCompletionCreateParams
 import com.openai.models.chat.completions.ChatCompletionMessageFunctionToolCall
 import com.openai.models.chat.completions.ChatCompletionMessageParam
+import com.openai.models.chat.completions.ChatCompletionStreamOptions
 import com.openai.models.chat.completions.ChatCompletionSystemMessageParam
 import com.openai.models.chat.completions.ChatCompletionToolMessageParam
 import com.openai.models.chat.completions.ChatCompletionUserMessageParam
+import com.openai.models.completions.CompletionUsage
 import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -55,6 +57,9 @@ internal object OpenAiCompatLoop {
         describe: (String, Map<String, Any?>) -> String,
         images: List<ImageAttachment>,
         history: List<ChatMessage>,
+        providerId: String,
+        modelName: String,
+        usageListener: UsageListener,
         buildParams: ChatCompletionCreateParams.Builder.() -> Unit,
     ) {
         val functionTools = tools.map { spec ->
@@ -88,18 +93,22 @@ internal object OpenAiCompatLoop {
             val textThisTurn = StringBuilder()
             val pendingCalls = sortedMapOf<Long, PendingToolCall>()
             var usedTools = false
+            var lastUsage: CompletionUsage? = null
 
             try {
                 val params = ChatCompletionCreateParams.builder()
                     .apply(buildParams)
                     .apply { functionTools.forEach { addFunctionTool(it) } }
+                    .streamOptions(ChatCompletionStreamOptions.builder().includeUsage(true).build())
                     .messages(messages)
                     .build()
 
                 client.chat().completions().createStreaming(params).use { response ->
                     val iterator = response.stream().iterator()
                     while (iterator.hasNext()) {
-                        val choice = iterator.next().choices().firstOrNull() ?: continue
+                        val chunk = iterator.next()
+                        chunk.usage().ifPresent { lastUsage = it }
+                        val choice = chunk.choices().firstOrNull() ?: continue
                         val delta = choice.delta()
 
                         delta.content().orElse(null)?.let { text ->
@@ -122,7 +131,17 @@ internal object OpenAiCompatLoop {
                     }
                 }
             } catch (e: OpenAIException) {
+                if (e.message?.contains("does not support tools") == true) {
+                    throw LlmProviderException(
+                        "\"$modelName\" doesn't support tool calling, so it can't read or write anything in your workspace. Pick a different model in Settings → Local AI model (Ollama).",
+                        e,
+                    )
+                }
                 throw LlmProviderException("$errorPrefix: ${e.message}", e)
+            }
+
+            lastUsage?.let { usage ->
+                usageListener.onUsage(LlmUsage(providerId, modelName, usage.promptTokens(), usage.completionTokens()))
             }
 
             if (!usedTools || pendingCalls.isEmpty()) {

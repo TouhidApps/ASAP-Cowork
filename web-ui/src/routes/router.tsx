@@ -2,26 +2,24 @@ import { createBrowserRouter } from 'react-router-dom'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { AdminLayout } from '@/components/layout/AdminLayout'
 import { RequireAdminAuth } from '@/features/admin/components/RequireAdminAuth'
-import { ChatPage } from '@/pages/ChatPage'
-import { NotesPage } from '@/pages/NotesPage'
 import { AdminLoginPage } from '@/pages/AdminLoginPage'
 import { AdminDashboardPage } from '@/pages/AdminDashboardPage'
 import { AdminConversationPage } from '@/pages/AdminConversationPage'
 import { AdminProvidersPage } from '@/pages/AdminProvidersPage'
+import { AdminUsagePage } from '@/pages/AdminUsagePage'
 import { AdminWorkspacePage } from '@/pages/AdminWorkspacePage'
 
 /**
- * Add new feature pages here, nested under AppLayout. Once a feature grows
- * routes of its own, give it a nested route group: { path: 'chat', children: [...] }.
+ * `/` and `/notes` are registered here only so the URL and NavLink active
+ * state track the current tab — AppLayout renders ChatPage and NotesPage
+ * itself (both stay mounted, toggled via CSS) rather than through these
+ * children's elements, so switching tabs doesn't unmount either one.
  */
 export const router = createBrowserRouter([
   {
     path: '/',
     element: <AppLayout />,
-    children: [
-      { index: true, element: <ChatPage /> },
-      { path: 'notes', element: <NotesPage /> },
-    ],
+    children: [{ index: true }, { path: 'notes' }],
   },
   { path: '/admin/login', element: <AdminLoginPage /> },
   {
@@ -34,6 +32,7 @@ export const router = createBrowserRouter([
           { index: true, element: <AdminDashboardPage /> },
           { path: 'conversation', element: <AdminConversationPage /> },
           { path: 'providers', element: <AdminProvidersPage /> },
+          { path: 'usage', element: <AdminUsagePage /> },
           { path: 'settings', element: <AdminWorkspacePage /> },
         ],
       },

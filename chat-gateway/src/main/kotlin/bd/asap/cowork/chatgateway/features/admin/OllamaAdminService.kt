@@ -243,14 +243,42 @@ class OllamaAdminService(private val provider: OllamaLlmProvider) {
             val obj = json.parseToJsonElement(response.body()).jsonObject
             obj["models"]?.jsonArray?.map { element ->
                 val model = element.jsonObject
+                val name = model["name"]?.jsonPrimitive?.contentOrNull ?: "unknown"
                 OllamaModelInfo(
-                    name = model["name"]?.jsonPrimitive?.contentOrNull ?: "unknown",
+                    name = name,
                     sizeBytes = model["size"]?.jsonPrimitive?.longOrNull ?: 0L,
+                    supportsTools = supportsTools(name),
                 )
             } ?: emptyList()
         }
     } catch (e: Exception) {
         null
+    }
+
+    // Ollama derives a model's capabilities from its chat template, so this
+    // is authoritative (unlike guessing from the name) — e.g. the gemma3
+    // family reports ["completion", "vision"] with no "tools" entry, and any
+    // tool-enabled request against it is rejected outright by Ollama itself.
+    // Cached since a given tag's capabilities never change without a re-pull.
+    private val toolSupportCache = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+
+    private fun supportsTools(modelName: String): Boolean = toolSupportCache.getOrPut(modelName) {
+        try {
+            val request = HttpRequest.newBuilder(URI.create("${provider.host()}/api/show"))
+                .timeout(Duration.ofSeconds(3))
+                .POST(HttpRequest.BodyPublishers.ofString(buildJsonObject { put("model", modelName) }.toString()))
+                .header("Content-Type", "application/json")
+                .build()
+            val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+            if (response.statusCode() !in 200..299) {
+                true
+            } else {
+                val capabilities = json.parseToJsonElement(response.body()).jsonObject["capabilities"]?.jsonArray
+                capabilities?.any { it.jsonPrimitive.contentOrNull == "tools" } ?: true
+            }
+        } catch (e: Exception) {
+            true
+        }
     }
 
     private fun systemMemoryGb(): Double {
@@ -260,13 +288,14 @@ class OllamaAdminService(private val provider: OllamaLlmProvider) {
     }
 
     private fun suggestedModels(systemMemoryGb: Double): List<SuggestedOllamaModel> =
-        CATALOG.map { (name, sizeGb, minRam) ->
+        CATALOG.map { entry ->
             SuggestedOllamaModel(
-                name = name,
-                approxSizeGb = sizeGb,
-                minRamGb = minRam,
-                recommended = name == OllamaLlmProvider.DEFAULT_MODEL && systemMemoryGb >= minRam,
-                fitsSystemMemory = systemMemoryGb >= minRam,
+                name = entry.name,
+                approxSizeGb = entry.approxSizeGb,
+                minRamGb = entry.minRamGb,
+                recommended = entry.name == OllamaLlmProvider.DEFAULT_MODEL && systemMemoryGb >= entry.minRamGb,
+                fitsSystemMemory = systemMemoryGb >= entry.minRamGb,
+                supportsTools = entry.supportsTools,
             )
         }
 
@@ -284,19 +313,27 @@ class OllamaAdminService(private val provider: OllamaLlmProvider) {
         )
     }
 
+    private data class CatalogEntry(
+        val name: String,
+        val approxSizeGb: Double,
+        val minRamGb: Double,
+        /** The gemma3 family has no tool-calling template in Ollama — a tool-enabled chat request against one fails outright ("does not support tools"), breaking every agent that reads/writes the workspace. */
+        val supportsTools: Boolean = true,
+    )
+
     companion object {
-        // name, approx download size (GB), minimum recommended system RAM (GB)
         private val CATALOG = listOf(
-            Triple("gemma3:1b", 0.8, 4.0),
-            Triple("llama3.2:1b", 1.3, 4.0),
-            Triple("llama3.2:3b", 2.0, 8.0),
-            Triple("gemma3:4b", 3.3, 8.0),
-            Triple("llama3.1:8b", 4.7, 8.0),
-            Triple("qwen2.5:7b", 4.7, 8.0),
-            Triple("mistral-nemo:12b", 7.1, 16.0),
-            Triple("gemma3:12b", 8.1, 16.0),
-            Triple("gemma3:27b", 17.0, 32.0),
-            Triple("llama3.1:70b", 40.0, 64.0),
+            CatalogEntry("gemma3:1b", 0.8, 4.0, supportsTools = false),
+            CatalogEntry("llama3.2:1b", 1.3, 4.0),
+            CatalogEntry("llama3.2:3b", 2.0, 8.0),
+            CatalogEntry("gemma3:4b", 3.3, 8.0, supportsTools = false),
+            CatalogEntry("llama3.1:8b", 4.7, 8.0),
+            CatalogEntry("qwen2.5:7b", 4.7, 8.0),
+            CatalogEntry("mistral-nemo:12b", 7.1, 16.0),
+            CatalogEntry("gemma3:12b", 8.1, 16.0, supportsTools = false),
+            CatalogEntry("gemma3:27b", 17.0, 32.0, supportsTools = false),
+            CatalogEntry("qwen3.6:27b", 17.0, 32.0),
+            CatalogEntry("llama3.1:70b", 40.0, 64.0),
         )
     }
 }

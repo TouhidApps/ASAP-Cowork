@@ -2,14 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { MediaLightbox } from '@/features/chat/components/MediaLightbox'
 import { MessageBubble } from '@/features/chat/components/MessageBubble'
 import {
-  AndroidIcon,
-  AppleIcon,
   AssistantAvatarIcon,
   FlutterIcon,
   KmpIcon,
   KotlinIcon,
   ReactIcon,
   SwiftIcon,
+  WebIcon,
 } from '@/features/chat/icons'
 import type { ChatMessage, OpenMedia } from '@/features/chat/types'
 
@@ -30,12 +29,11 @@ const STARTER_PROMPTS = [
 // covering every major mobile stack, not just "an AI chat".
 const SUPPORTED_PLATFORMS = [
   { label: 'Kotlin', Icon: KotlinIcon },
-  { label: 'Android', Icon: AndroidIcon },
-  { label: 'iOS', Icon: AppleIcon },
+  { label: 'KMP', Icon: KmpIcon },
   { label: 'Swift', Icon: SwiftIcon },
   { label: 'Flutter', Icon: FlutterIcon },
-  { label: 'KMP', Icon: KmpIcon },
   { label: 'React Native', Icon: ReactIcon },
+  { label: 'Web', Icon: WebIcon },
 ]
 
 export function MessageList({

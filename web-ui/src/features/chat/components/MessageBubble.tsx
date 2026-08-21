@@ -1,8 +1,10 @@
 import { Fragment } from 'react'
+import DOMPurify from 'dompurify'
+import { marked } from 'marked'
 import { API_BASE_URL } from '@/api/client'
-import { AssistantAvatarIcon, CheckIcon, CloseIcon, PlayIcon, UserIcon } from '@/features/chat/icons'
+import { AssistantAvatarIcon, CheckIcon, CloseIcon, NoteIcon, PlayIcon, UserIcon } from '@/features/chat/icons'
 import { STAGES } from '@/features/chat/types'
-import type { ChatMessage, OpenMedia, ToolActivity } from '@/features/chat/types'
+import type { ChatMessage, NoteUsed, OpenMedia, ToolActivity } from '@/features/chat/types'
 
 const stageLabel = (stage: ChatMessage['stage']) => STAGES.find((s) => s.id === stage)?.label ?? stage
 
@@ -22,6 +24,16 @@ const FILE_LINE = /^\[([^\]]+)\]\((\/api\/v1\/branding\/[^\s)]+)\)$/
 // ToolResult.notice (e.g. record_device_video's "use a physical device for
 // better performance" tip) — a markdown blockquote, e.g. "> some text".
 const NOTICE_LINE = /^> (.+)$/
+
+// Inline markdown only (bold, italics, code, links) — the image/video/file/
+// notice line patterns above are matched first and rendered as interactive
+// React elements (lightbox, play-icon overlay), so plain text is all that
+// reaches here.
+function renderInlineMarkdown(line: string) {
+  if (line === '') return null
+  const html = DOMPurify.sanitize(marked.parseInline(line, { async: false, gfm: true }) as string)
+  return <span dangerouslySetInnerHTML={{ __html: html }} />
+}
 
 function renderContent(content: string, onOpenMedia: (media: OpenMedia) => void) {
   // emitMediaNotes (llm-gateway) deterministically appends a screenshot/video
@@ -80,7 +92,7 @@ function renderContent(content: string, onOpenMedia: (media: OpenMedia) => void)
             {noticeMatch[1]}
           </div>
         ) : (
-          line
+          renderInlineMarkdown(line)
         )
     return (
       <Fragment key={index}>
@@ -108,6 +120,19 @@ function ToolActivityList({ activities }: { activities: ToolActivity[] }) {
   )
 }
 
+function NoteUsedBadges({ notes }: { notes: NoteUsed[] }) {
+  return (
+    <div className="chat-note-badges">
+      {notes.map((note, index) => (
+        <span key={index} className="chat-note-badge" title={note.snippet}>
+          <NoteIcon />
+          Used a saved note
+        </span>
+      ))}
+    </div>
+  )
+}
+
 export function MessageBubble({
   message,
   onOpenMedia,
@@ -117,6 +142,7 @@ export function MessageBubble({
 }) {
   const isUser = message.role === 'user'
   const toolActivity = message.toolActivity ?? []
+  const notesUsed = message.notesUsed ?? []
   const isWaitingForFirstToken = message.streaming && message.content === '' && toolActivity.length === 0
 
   return (
@@ -146,6 +172,7 @@ export function MessageBubble({
             </div>
           )}
           {toolActivity.length > 0 && <ToolActivityList activities={toolActivity} />}
+          {notesUsed.length > 0 && <NoteUsedBadges notes={notesUsed} />}
           {renderContent(message.content, onOpenMedia)}
           {message.streaming && <span className="chat-cursor" aria-hidden="true" />}
           {message.files && message.files.length > 0 && (

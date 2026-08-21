@@ -3,10 +3,12 @@ import { ChatHistoryDrawer } from '@/features/chat/components/ChatHistoryDrawer'
 import { ExamplesDrawer } from '@/features/chat/components/ExamplesDrawer'
 import { MessageInput } from '@/features/chat/components/MessageInput'
 import { MessageList } from '@/features/chat/components/MessageList'
-import { DiffIcon, HistoryIcon, PlusIcon, SparkleIcon, TerminalIcon } from '@/features/chat/icons'
+import { DiffIcon, FolderIcon, HistoryIcon, PlanIcon, PlusIcon, SparkleIcon, TerminalIcon } from '@/features/chat/icons'
 import { useChat } from '@/features/chat/useChat'
 import { CodeChangesPanel } from '@/features/history/components/CodeChangesPanel'
 import { LogcatDrawer } from '@/features/logcat/components/LogcatDrawer'
+import { PlanPreviewPanel } from '@/features/plan/components/PlanPreviewPanel'
+import { ProjectExplorerPanel } from '@/features/project/components/ProjectExplorerPanel'
 import '@/features/chat/chat.css'
 
 export function ChatPage() {
@@ -25,7 +27,9 @@ export function ChatPage() {
   } = useChat()
   const [historyOpen, setHistoryOpen] = useState(false)
   const [logsOpen, setLogsOpen] = useState(false)
+  const [projectOpen, setProjectOpen] = useState(false)
   const [changesOpen, setChangesOpen] = useState(false)
+  const [planOpen, setPlanOpen] = useState(false)
   const [examplesOpen, setExamplesOpen] = useState(false)
   // `nonce` (not just the text) is what MessageInput watches to refill the
   // composer — picking the exact same starter prompt twice in a row would
@@ -57,12 +61,28 @@ export function ChatPage() {
               <span className="chat-button-label">Device Logs</span>
             </button>
             <button
+              className={`chat-history-button${projectOpen ? ' active' : ''}`}
+              onClick={() => setProjectOpen((v) => !v)}
+              aria-label="Show project files"
+            >
+              <FolderIcon />
+              <span className="chat-button-label">Project</span>
+            </button>
+            <button
               className={`chat-history-button${changesOpen ? ' active' : ''}`}
               onClick={() => setChangesOpen((v) => !v)}
               aria-label="Show code changes"
             >
               <DiffIcon />
               <span className="chat-button-label">Code Changes</span>
+            </button>
+            <button
+              className={`chat-history-button${planOpen ? ' active' : ''}`}
+              onClick={() => setPlanOpen((v) => !v)}
+              aria-label="Show plan preview"
+            >
+              <PlanIcon />
+              <span className="chat-button-label">Plan Preview</span>
             </button>
           </div>
           <div className="chat-toolbar-right">
@@ -118,6 +138,8 @@ export function ChatPage() {
         </div>
       </div>
       {changesOpen && <CodeChangesPanel onClose={() => setChangesOpen(false)} />}
+      {planOpen && <PlanPreviewPanel onClose={() => setPlanOpen(false)} />}
+      {projectOpen && <ProjectExplorerPanel onClose={() => setProjectOpen(false)} />}
     </div>
   )
 }

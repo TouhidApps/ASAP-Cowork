@@ -12,6 +12,8 @@ import bd.asap.cowork.chatgateway.features.chat.chatRoutes
 import bd.asap.cowork.chatgateway.features.history.historyRoutes
 import bd.asap.cowork.chatgateway.features.logcat.logcatRoutes
 import bd.asap.cowork.chatgateway.features.notes.notesRoutes
+import bd.asap.cowork.chatgateway.features.plan.planRoutes
+import bd.asap.cowork.chatgateway.features.project.projectRoutes
 import bd.asap.cowork.chatgateway.toWire
 import bd.asap.cowork.contextstore.ConversationRepository
 import bd.asap.cowork.contextstore.StoredMessage
@@ -70,6 +72,8 @@ fun Application.configureRouting() {
         chatRoutes()
         logcatRoutes()
         historyRoutes()
+        planRoutes()
+        projectRoutes()
 
         get("/api/v1/screenshots/{filename}") {
             val filename = call.parameters["filename"]

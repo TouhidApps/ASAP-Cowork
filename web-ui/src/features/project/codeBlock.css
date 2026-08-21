@@ -1,0 +1,88 @@
+.project-file-detail-text.hljs {
+  --hljs-comment: #6b7280;
+  --hljs-keyword: #aa3bff;
+  --hljs-string: #2f9e44;
+  --hljs-number: #b45309;
+  --hljs-title: #2563eb;
+  --hljs-type: #0891b2;
+  --hljs-attr: #b45309;
+}
+
+@media (prefers-color-scheme: dark) {
+  .project-file-detail-text.hljs {
+    --hljs-comment: #7d8590;
+    --hljs-keyword: #c9a6ff;
+    --hljs-string: #7ee787;
+    --hljs-number: #f2cc60;
+    --hljs-title: #79c0ff;
+    --hljs-type: #56d4dd;
+    --hljs-attr: #ffab70;
+  }
+}
+
+.hljs-comment,
+.hljs-quote {
+  color: var(--hljs-comment);
+  font-style: italic;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-subst,
+.hljs-tag,
+.hljs-name {
+  color: var(--hljs-keyword);
+}
+
+.hljs-string,
+.hljs-doctag,
+.hljs-regexp {
+  color: var(--hljs-string);
+}
+
+.hljs-number {
+  color: var(--hljs-number);
+}
+
+.hljs-title,
+.hljs-title.function_,
+.hljs-title.class_,
+.hljs-section {
+  color: var(--hljs-title);
+  font-weight: 600;
+}
+
+.hljs-type,
+.hljs-built_in,
+.hljs-class .hljs-title {
+  color: var(--hljs-type);
+}
+
+.hljs-attr,
+.hljs-attribute,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-params {
+  color: var(--hljs-attr);
+}
+
+.hljs-meta {
+  color: var(--hljs-comment);
+}
+
+.hljs-deletion {
+  background: rgba(217, 79, 79, 0.15);
+}
+
+.hljs-addition {
+  background: rgba(63, 185, 80, 0.15);
+}
+
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: 700;
+}

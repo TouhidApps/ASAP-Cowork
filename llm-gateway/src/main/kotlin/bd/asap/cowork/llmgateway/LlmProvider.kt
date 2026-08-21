@@ -21,8 +21,14 @@ interface LlmProvider {
     /** Whether this provider needs an API key at all — false only for Ollama (local, unauthenticated). */
     val requiresApiKey: Boolean get() = true
 
-    /** Streams the model's reply as it's generated. */
-    fun streamComplete(systemPrompt: String?, messages: List<ChatMessage>): Flow<String>
+    /**
+     * Streams the model's reply as it's generated. [fast] routes to a
+     * cheaper/smaller model instead of the provider's main one — for
+     * short, low-stakes calls like intent classification, where the main
+     * model's quality is unnecessary overhead. Defaults to false so every
+     * existing call site keeps using the main model unless it opts in.
+     */
+    fun streamComplete(systemPrompt: String?, messages: List<ChatMessage>, fast: Boolean = false): Flow<String>
 
     /**
      * Runs a full agentic tool-use loop: sends [userMessage] with [tools]

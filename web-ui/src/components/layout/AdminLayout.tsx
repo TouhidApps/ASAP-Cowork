@@ -8,6 +8,7 @@ const navItems = [
   { to: '/admin', label: 'Dashboard', end: true },
   { to: '/admin/conversation', label: 'Conversation', end: false },
   { to: '/admin/providers', label: 'Providers', end: false },
+  { to: '/admin/usage', label: 'Usage', end: false },
   { to: '/admin/settings', label: 'Settings', end: false },
 ]
 

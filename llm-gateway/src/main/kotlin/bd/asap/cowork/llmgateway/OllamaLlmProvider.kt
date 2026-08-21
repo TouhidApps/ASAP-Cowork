@@ -5,6 +5,7 @@ import com.openai.client.okhttp.OpenAIOkHttpClient
 import com.openai.models.ChatModel
 import com.openai.models.chat.completions.ChatCompletionAssistantMessageParam
 import com.openai.models.chat.completions.ChatCompletionCreateParams
+import com.openai.models.chat.completions.ChatCompletionStreamOptions
 import com.openai.models.chat.completions.ChatCompletionSystemMessageParam
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -31,6 +32,7 @@ class OllamaLlmProvider(
     private val hostProvider: () -> String = { DEFAULT_HOST },
     initialModel: () -> String = { DEFAULT_MODEL },
     private val maxTokens: Long = 4096,
+    private val usageListener: UsageListener = UsageListener {},
 ) : LlmProvider {
     override val id: String = "ollama"
     override val requiresApiKey: Boolean = false
@@ -49,10 +51,13 @@ class OllamaLlmProvider(
     private fun client(): OpenAIClient =
         OpenAIOkHttpClient.builder().baseUrl("${hostProvider().trimEnd('/')}/v1").apiKey("ollama").build()
 
-    override fun streamComplete(systemPrompt: String?, messages: List<ChatMessage>): Flow<String> = flow {
+    // fast is ignored here — Ollama is a single locally-hosted model with no
+    // billed-per-token cost, so there's no cheaper tier to route to.
+    override fun streamComplete(systemPrompt: String?, messages: List<ChatMessage>, fast: Boolean): Flow<String> = flow {
         val builder = ChatCompletionCreateParams.builder()
             .model(ChatModel.of(model))
             .maxCompletionTokens(maxTokens)
+            .streamOptions(ChatCompletionStreamOptions.builder().includeUsage(true).build())
 
         if (systemPrompt != null) {
             builder.addMessage(ChatCompletionSystemMessageParam.builder().content(systemPrompt).build())
@@ -65,17 +70,21 @@ class OllamaLlmProvider(
             }
         }
 
+        var lastUsage: com.openai.models.completions.CompletionUsage? = null
         try {
             client().chat().completions().createStreaming(builder.build()).use { response ->
                 val iterator = response.stream().iterator()
                 while (iterator.hasNext()) {
-                    val choice = iterator.next().choices().firstOrNull() ?: continue
+                    val chunk = iterator.next()
+                    chunk.usage().ifPresent { lastUsage = it }
+                    val choice = chunk.choices().firstOrNull() ?: continue
                     choice.delta().content().orElse(null)?.let { text -> emit(text) }
                 }
             }
         } catch (e: IOException) {
             throw LlmProviderException("Couldn't reach Ollama at ${hostProvider()}. Make sure it's running.", e)
         }
+        lastUsage?.let { usage -> usageListener.onUsage(LlmUsage(id, model, usage.promptTokens(), usage.completionTokens())) }
     }.flowOn(Dispatchers.IO)
 
     override fun runAgenticLoop(
@@ -99,6 +108,9 @@ class OllamaLlmProvider(
                     describe = describe,
                     images = images,
                     history = history,
+                    providerId = id,
+                    modelName = model,
+                    usageListener = usageListener,
                 ) {
                     model(ChatModel.of(model))
                     maxCompletionTokens(maxTokens)
