@@ -34,4 +34,5 @@ include(
     ":agents:publishing-agent",
     ":agents:notes-agent",
     ":agents:workspace-agent",
+    ":agents:general-purpose-agent",
 )

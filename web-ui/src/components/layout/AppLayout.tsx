@@ -47,7 +47,7 @@ export function AppLayout() {
           <ChatPage />
         </div>
         <div className="app-tab-pane" hidden={!isNotes}>
-          <NotesPage />
+          <NotesPage active={isNotes} />
         </div>
       </main>
     </div>

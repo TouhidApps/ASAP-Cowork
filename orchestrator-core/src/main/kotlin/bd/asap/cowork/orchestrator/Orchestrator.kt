@@ -101,7 +101,11 @@ class Orchestrator(
         val notesAgent = agents.firstOrNull { Capability.NOTES in it.capabilities } ?: return input
 
         val found = StringBuilder()
-        notesAgent.execute(Task(capability = Capability.NOTES, input = input, history = history), context)
+        // readOnly=true withholds notes-agent's add_note tool entirely — this
+        // pre-step only ever folds a *search* result into another task's
+        // input, and must never create a note as a side effect of unrelated
+        // wording that happens to contain a trigger word like "note".
+        notesAgent.execute(Task(capability = Capability.NOTES, input = input, history = history, metadata = mapOf("readOnly" to "true")), context)
             .catch { /* a failed notes lookup shouldn't block the actual task */ }
             .collect { event ->
                 if (event is AgentEvent.ToolActivity) emit(event)

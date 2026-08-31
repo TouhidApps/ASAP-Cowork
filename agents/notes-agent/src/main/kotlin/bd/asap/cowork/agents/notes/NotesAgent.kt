@@ -20,19 +20,24 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
 /**
- * Searches the user's personal notes scratchpad (context-store's
+ * Reads and writes the user's personal notes scratchpad (context-store's
  * [NoteRepository], same data behind the Notes tab) for whatever a request
  * references from it — a note's content is arbitrary text, so this could be
  * a password or API key, but just as easily a paragraph of copy, a
  * requirements list, or any other text the user jotted down. Only ever runs
  * when a message actually references notes: either the intent classifier
- * routes straight here for a standalone "what does my note say" question, or
- * Orchestrator.route runs it as a pre-step (see its `withNotesContext`) when
- * another task's wording implies something saved is needed — a completely
- * unrelated message never touches the notes table. Replies with just the
- * matched content, no commentary, so a pre-step call can fold the result
- * straight into the next agent's task (e.g. handing found copy to the UI
- * agent that asked for it).
+ * routes straight here for a standalone "what does my note say"/"add a note"
+ * request, or Orchestrator.route runs it as a read-only pre-step (see its
+ * `withNotesContext`) when another task's wording implies something saved is
+ * needed — a completely unrelated message never touches the notes table.
+ *
+ * Direct calls (task.metadata["readOnly"] unset) get both tools and reply
+ * either with just the matched content (search) or a short confirmation
+ * (add), matching how the request phrased itself. Orchestrator's pre-step
+ * passes `metadata = mapOf("readOnly" to "true")`, which withholds add_note
+ * entirely — that call folds a *search* result into another task's input, so
+ * it must never be able to create a note as a side effect of unrelated
+ * wording that happens to contain "note".
  */
 class NotesAgent(
     private val providers: LlmProviderRegistry,
@@ -41,9 +46,10 @@ class NotesAgent(
     override val id: String = "notes-agent"
     override val capabilities: Set<Capability> = setOf(Capability.NOTES)
     override val description: String =
-        "Searches the user's saved notes/scratchpad for content referenced in a request — this can be anything they wrote there: a password or API key, but equally a paragraph of text, requirements, copy, or any other saved note. Use for 'check/find/read/use what's in my notes' requests, or whenever a request references something the user says is saved in their notes."
+        "Reads and writes the user's saved notes/scratchpad — this can be anything they wrote there: a password or API key, but equally a paragraph of text, requirements, copy, or any other saved note. Use for 'check/find/read/use what's in my notes' requests, or 'add/save/remember/jot down/write down ... as a note' requests, or whenever a request references something the user says is saved in their notes."
 
     override fun execute(task: Task, context: ProjectContextView): Flow<AgentEvent> = flow {
+        val readOnly = task.metadata["readOnly"] == "true"
         val executor = ToolExecutor { name, input, _ ->
             when (name) {
                 SEARCH_TOOL -> {
@@ -55,15 +61,29 @@ class NotesAgent(
                         ToolResult(matches.joinToString("\n---\n") { it.content })
                     }
                 }
+                ADD_TOOL -> {
+                    if (readOnly) {
+                        ToolResult("add_note isn't available for this lookup.", isError = true)
+                    } else {
+                        val content = (input["content"] as? String).orEmpty()
+                        if (content.isBlank()) {
+                            ToolResult("content can't be empty.", isError = true)
+                        } else {
+                            notes.create(content)
+                            ToolResult("Saved.")
+                        }
+                    }
+                }
                 else -> ToolResult("Unknown tool: $name", isError = true)
             }
         }
 
+        val tools = if (readOnly) listOf(searchNotesSpec) else listOf(searchNotesSpec, addNoteSpec)
         val history = task.history.map { it.toChatMessage() }
         val reply = StringBuilder()
 
         providers.current()
-            .runAgenticLoop(SYSTEM_PROMPT, task.input, listOf(searchNotesSpec), executor, { _, _ -> "Searching your notes" }, history = history)
+            .runAgenticLoop(SYSTEM_PROMPT, task.input, tools, executor, { _, _ -> "Working with your notes" }, history = history)
             .collect { event ->
                 when (event) {
                     is AgentStreamEvent.TextDelta -> {
@@ -91,12 +111,15 @@ class NotesAgent(
 
     private companion object {
         const val SEARCH_TOOL = "search_notes"
+        const val ADD_TOOL = "add_note"
 
         val SYSTEM_PROMPT = buildString {
-            appendLine("You are the Notes agent inside ASAP-Cowork. search_notes searches the user's personal notes scratchpad, which can hold anything they've saved — credentials, paragraphs of text, requirements, copy, config values, or anything else.")
-            appendLine("Call search_notes with keywords drawn from what the request is actually asking for — a credential name, a topic, distinctive words from a remembered paragraph, whatever points at the right note.")
+            appendLine("You are the Notes agent inside ASAP-Cowork, managing the user's personal notes scratchpad, which can hold anything they've saved — credentials, paragraphs of text, requirements, copy, config values, or anything else.")
+            appendLine("search_notes searches existing notes for text containing a query. Call it with keywords drawn from what the request is actually asking for — a credential name, a topic, distinctive words from a remembered paragraph, whatever points at the right note.")
             appendLine("If the request is vague (e.g. \"use that paragraph from my notes\"), try a broad or empty query first to see everything, then judge from the results which note it means.")
-            appendLine("Reply with ONLY the exact matched note content, verbatim as stored, and nothing else — don't summarize or paraphrase it. If nothing matches, reply exactly: No matching note found.")
+            appendLine("add_note (when offered) saves a new note. Call it when the request asks to add/save/remember/jot down/write down/note something — pass the exact text to save, not a paraphrase of the request itself (e.g. for \"note down the wifi password is hunter2\", save \"wifi password is hunter2\", not the whole sentence).")
+            appendLine("After a search: reply with ONLY the exact matched note content, verbatim as stored, and nothing else — don't summarize or paraphrase it. If nothing matches, reply exactly: No matching note found.")
+            appendLine("After an add: reply with a short confirmation only (e.g. \"Saved.\") — don't repeat the saved content back.")
         }
 
         val searchNotesSpec = ToolSpec(
@@ -111,6 +134,21 @@ class NotesAgent(
                     ),
                 ),
                 "required" to listOf("query"),
+            ),
+        )
+
+        val addNoteSpec = ToolSpec(
+            name = ADD_TOOL,
+            description = "Save a new note to the user's personal notes scratchpad. Returns a confirmation once saved.",
+            parametersSchema = mapOf(
+                "type" to "object",
+                "properties" to mapOf(
+                    "content" to mapOf(
+                        "type" to "string",
+                        "description" to "The exact text to save as a new note.",
+                    ),
+                ),
+                "required" to listOf("content"),
             ),
         )
     }

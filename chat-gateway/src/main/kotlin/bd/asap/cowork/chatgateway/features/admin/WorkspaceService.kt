@@ -27,7 +27,17 @@ class WorkspaceService(
         if (!target.isDirectory) throw AppException.BadRequest("Not a directory: ${target.path}")
 
         val canonical = target.canonicalFile
-        val entries = (canonical.listFiles() ?: emptyArray())
+        // listFiles() returns null both for a genuinely empty directory and for
+        // one the OS refuses to list (e.g. macOS TCC silently denying a headless
+        // JVM access to ~/Documents/~/Desktop/~/Downloads) — folding that into
+        // emptyArray() would show "No subfolders here" for a directory that
+        // actually has some, which is exactly wrong here.
+        val listed = canonical.listFiles()
+            ?: throw AppException.BadRequest(
+                "Can't list \"${canonical.path}\" — permission denied. On macOS, grant this app's terminal/IDE " +
+                    "access under System Settings -> Privacy & Security -> Files and Folders, then try again.",
+            )
+        val entries = listed
             .filter { it.isDirectory && !it.name.startsWith(".") }
             .sortedBy { it.name.lowercase() }
             .map { WorkspaceBrowseEntry(name = it.name, path = it.path) }

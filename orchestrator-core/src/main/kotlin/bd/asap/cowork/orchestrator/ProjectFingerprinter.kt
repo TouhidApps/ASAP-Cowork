@@ -15,7 +15,13 @@ object ProjectFingerprinter {
         if (!Files.isDirectory(workspaceRoot)) return emptySet()
 
         val stacks = mutableSetOf<String>()
-        val entries = Files.list(workspaceRoot).use { it.map { p -> p.fileName.toString() }.toList() }
+        // The workspace root is user-configurable (DirectoryPicker) and can land
+        // on a path this process has no OS-level permission to list — e.g. macOS
+        // TCC silently denying access to ~/Documents for a headless JVM. Treat
+        // that as "nothing detected yet" instead of crashing DI startup.
+        val entries = runCatching {
+            Files.list(workspaceRoot).use { it.map { p -> p.fileName.toString() }.toList() }
+        }.getOrDefault(emptyList())
 
         fun exists(name: String) = entries.contains(name)
 

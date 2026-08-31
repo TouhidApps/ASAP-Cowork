@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ChangeEvent, FormEvent, KeyboardEvent } from 'react'
 import { uploadAttachment } from '@/features/chat/api'
 import { resizeImageIfNeeded } from '@/features/chat/imageResize'
@@ -32,11 +32,22 @@ export function MessageInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = textareaRef.current
     if (!el) return
-    el.style.height = 'auto'
-    el.style.height = `${Math.min(el.scrollHeight, MAX_TEXTAREA_HEIGHT)}px`
+    const resize = () => {
+      el.style.height = 'auto'
+      el.style.height = `${Math.min(el.scrollHeight, MAX_TEXTAREA_HEIGHT)}px`
+    }
+    resize()
+    // Chat and Notes stay mounted simultaneously and are only toggled via
+    // the `hidden` attribute (see AppLayout) — a textarea that mounts while
+    // its tab is hidden measures a 0 scrollHeight, and `value` alone never
+    // changes when the tab is later revealed. Re-measure on any resize,
+    // which includes the hidden -> visible transition.
+    const observer = new ResizeObserver(resize)
+    observer.observe(el)
+    return () => observer.disconnect()
   }, [value])
 
   useEffect(() => {

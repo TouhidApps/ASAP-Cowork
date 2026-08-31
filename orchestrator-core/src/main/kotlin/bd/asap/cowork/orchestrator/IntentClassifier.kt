@@ -11,8 +11,9 @@ import bd.asap.cowork.llmgateway.LlmProviderRegistry
  * Decides which registered agent's capability a raw chat message belongs to,
  * so the client no longer names a `stage` up front (PLAN.md §2.3 task
  * routing — single-task version; multi-task DAG decomposition is still
- * future work). Falls back to the first registered agent if the model's
- * reply doesn't clearly name one, so routing never dead-ends. [history] lets
+ * future work). Falls back to [Capability.GENERAL] (or, if that's not
+ * registered, the first registered agent) if the model's reply doesn't
+ * clearly name one, so routing never dead-ends. [history] lets
  * a message that only makes sense in context (e.g. "make it use dark mode",
  * with no other noun to route on) still classify correctly.
  */
@@ -40,7 +41,13 @@ class IntentClassifier(private val providers: LlmProviderRegistry) {
         providers.current().streamComplete(systemPrompt, messages, fast = true).collect { reply.append(it) }
 
         val known = candidates.flatMap { it.capabilities }
-        return known.firstOrNull { it.id in reply.toString() } ?: known.first()
+        // If the model didn't name a capability the roster actually has, route
+        // to the general-purpose catch-all (when registered) rather than an
+        // arbitrary first agent — an unclassifiable message is exactly what
+        // that agent exists for, not a reason to guess.
+        return known.firstOrNull { it.id in reply.toString() }
+            ?: known.firstOrNull { it == Capability.GENERAL }
+            ?: known.first()
     }
 }
 

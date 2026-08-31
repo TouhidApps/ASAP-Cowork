@@ -9,6 +9,7 @@ import bd.asap.cowork.agents.cicd.CicdAgent
 import bd.asap.cowork.agents.debugging.DebuggingAgent
 import bd.asap.cowork.agents.documentation.DocumentationAgent
 import bd.asap.cowork.agents.flutter.FlutterAgent
+import bd.asap.cowork.agents.generalpurpose.GeneralPurposeAgent
 import bd.asap.cowork.agents.ios.IosAgent
 import bd.asap.cowork.agents.kmp.KmpAgent
 import bd.asap.cowork.agents.landingpage.LandingPageAgent
@@ -174,6 +175,10 @@ fun appModule(contextDatabase: ContextDatabase) = module {
             register(PublishingAgent(get()))
             register(NotesAgent(get(), get()))
             register(WorkspaceAgent())
+            // Catch-all: registered last so every specialized capability above
+            // gets first pick; only IntentClassifier's unmatched-reply fallback
+            // and explicit Capability.GENERAL tasks reach it.
+            register(GeneralPurposeAgent(get()))
         }
     }
     single { IntentClassifier(get()) }

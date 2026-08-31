@@ -4,8 +4,8 @@ import { NoteInput } from '@/features/notes/components/NoteInput'
 import { useNotes } from '@/features/notes/useNotes'
 import '@/features/notes/notes.css'
 
-export function NotesWindow() {
-  const { notes, loading, error, add, edit, remove } = useNotes()
+export function NotesWindow({ active }: { active: boolean }) {
+  const { notes, loading, error, add, edit, remove } = useNotes(active)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {

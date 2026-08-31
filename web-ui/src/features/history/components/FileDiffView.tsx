@@ -16,8 +16,10 @@ export function FileDiffView({ file }: { file: FileDiff }) {
   }
 
   return (
-    <Diff viewType="split" diffType={parsed.type} hunks={parsed.hunks}>
-      {(hunks) => hunks.map((hunk) => <Hunk key={hunk.content} hunk={hunk} />)}
-    </Diff>
+    <div className="code-changes-diff-scroll">
+      <Diff viewType="split" diffType={parsed.type} hunks={parsed.hunks}>
+        {(hunks) => hunks.map((hunk) => <Hunk key={hunk.content} hunk={hunk} />)}
+      </Diff>
+    </div>
   )
 }

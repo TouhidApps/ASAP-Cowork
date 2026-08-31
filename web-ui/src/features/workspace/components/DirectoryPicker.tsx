@@ -26,17 +26,23 @@ export function DirectoryPicker({
   const [browsing, setBrowsing] = useState<WorkspaceBrowseResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pendingPath, setPendingPath] = useState<string | null>(null)
+  const [pathInput, setPathInput] = useState('')
 
   useEffect(() => {
     browseWorkspace()
-      .then(setBrowsing)
+      .then((result) => {
+        setBrowsing(result)
+        setPathInput(result.path)
+      })
       .catch((e: unknown) => setError(e instanceof Error ? e.message : 'Failed to browse directories'))
   }, [])
 
   const goTo = async (path?: string) => {
     setError(null)
     try {
-      setBrowsing(await browseWorkspace(path))
+      const result = await browseWorkspace(path)
+      setBrowsing(result)
+      setPathInput(result.path)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to browse directories')
     }
@@ -51,7 +57,29 @@ export function DirectoryPicker({
         <button disabled={!browsing.parent} onClick={() => goTo(browsing.parent ?? undefined)}>
           Up
         </button>
-        <code style={{ fontSize: 13, wordBreak: 'break-all' }}>{browsing.path}</code>
+        {/* Reaching another disk/partition (e.g. macOS's /Volumes) by clicking
+            "Up" alone means walking all the way to the filesystem root first,
+            which isn't discoverable — typing or pasting an absolute path here
+            jumps straight there. */}
+        <input
+          type="text"
+          value={pathInput}
+          onChange={(e) => setPathInput(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && goTo(pathInput)}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            fontSize: 13,
+            padding: '5px 8px',
+            borderRadius: 6,
+            border: '1px solid var(--border)',
+            background: 'var(--bg)',
+            color: 'var(--text-h)',
+            font: 'inherit',
+            boxSizing: 'border-box',
+          }}
+        />
+        <button onClick={() => goTo(pathInput)}>Go</button>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', maxHeight: 260, overflow: 'auto', marginBottom: 10 }}>

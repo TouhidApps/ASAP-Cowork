@@ -140,7 +140,6 @@
 .code-changes-file {
   border: 1px solid var(--border);
   border-radius: 8px;
-  overflow: hidden;
 }
 
 .code-changes-file-header {
@@ -150,6 +149,7 @@
   padding: 6px 10px;
   background: var(--code-bg);
   border-bottom: 1px solid var(--border);
+  border-radius: 7px 7px 0 0;
 }
 
 .code-changes-file-badge {
@@ -195,6 +195,10 @@
   opacity: 0.7;
 }
 
+.code-changes-diff-scroll {
+  overflow-x: auto;
+}
+
 .code-changes-file .diff {
   --diff-background-color: var(--bg);
   --diff-text-color: var(--text-h);
@@ -206,6 +210,18 @@
   --diff-code-insert-edit-background-color: rgba(63, 185, 80, 0.3);
   --diff-code-delete-edit-background-color: rgba(217, 79, 79, 0.3);
   font-size: 12px;
+  /* Let each side size to its longest line instead of the fixed-width,
+     wrapped layout react-diff-view ships by default — width:100% only
+     kicks in when a hunk's content is actually narrower than the panel. */
+  table-layout: auto;
+  width: auto;
+  min-width: 100%;
+}
+
+.code-changes-file .diff-code {
+  white-space: pre;
+  word-break: normal;
+  word-wrap: normal;
 }
 
 @media (max-width: 640px) {
