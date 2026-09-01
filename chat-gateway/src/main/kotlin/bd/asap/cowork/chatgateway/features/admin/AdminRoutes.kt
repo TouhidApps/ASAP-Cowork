@@ -2,6 +2,7 @@ package bd.asap.cowork.chatgateway.features.admin
 
 import bd.asap.cowork.chatgateway.common.ApiResponse
 import bd.asap.cowork.chatgateway.common.exceptions.AppException
+import bd.asap.cowork.chatgateway.features.email.emailToolsRoutes
 import bd.asap.cowork.chatgateway.plugins.AdminAuth
 import io.ktor.server.application.install
 import io.ktor.server.request.receive
@@ -29,6 +30,13 @@ fun Route.adminRoutes() {
 
     route("/api/v1/admin") {
         install(AdminAuth)
+
+        // Where per-tool admin routes live — emailToolsRoutes() mounts
+        // itself at "/email" (-> /api/v1/admin/tools/email); a future tool
+        // joins the same way, each in its own feature package.
+        route("/tools") {
+            emailToolsRoutes()
+        }
 
         route("/workspace") {
             get {

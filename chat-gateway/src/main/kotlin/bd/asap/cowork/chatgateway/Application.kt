@@ -2,6 +2,7 @@ package bd.asap.cowork.chatgateway
 
 import bd.asap.cowork.chatgateway.plugins.configureDI
 import bd.asap.cowork.chatgateway.plugins.configureDatabase
+import bd.asap.cowork.chatgateway.plugins.configureEmailPolling
 import bd.asap.cowork.chatgateway.plugins.configureHTTP
 import bd.asap.cowork.chatgateway.plugins.configureRouting
 import bd.asap.cowork.chatgateway.plugins.configureSerialization
@@ -24,4 +25,5 @@ fun Application.module() {
     configureHTTP()
     configureSockets()
     configureRouting()
+    configureEmailPolling()
 }

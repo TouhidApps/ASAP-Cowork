@@ -8,6 +8,7 @@ import bd.asap.cowork.agents.branding.BrandingAgent
 import bd.asap.cowork.agents.cicd.CicdAgent
 import bd.asap.cowork.agents.debugging.DebuggingAgent
 import bd.asap.cowork.agents.documentation.DocumentationAgent
+import bd.asap.cowork.agents.email.EmailAgent
 import bd.asap.cowork.agents.flutter.FlutterAgent
 import bd.asap.cowork.agents.generalpurpose.GeneralPurposeAgent
 import bd.asap.cowork.agents.ios.IosAgent
@@ -27,6 +28,7 @@ import bd.asap.cowork.agents.testing.TestingAgent
 import bd.asap.cowork.agents.workspace.WorkspaceAgent
 import bd.asap.cowork.chatgateway.config.DotEnv
 import bd.asap.cowork.chatgateway.config.FirebaseCredentialsStore
+import bd.asap.cowork.chatgateway.config.GmailOAuthCredentialsStore
 import bd.asap.cowork.chatgateway.config.ProviderCredentialsStore
 import bd.asap.cowork.chatgateway.config.ToolchainSettingsStore
 import bd.asap.cowork.chatgateway.config.WorkspaceSettingsStore
@@ -38,13 +40,17 @@ import bd.asap.cowork.chatgateway.features.admin.OllamaAdminService
 import bd.asap.cowork.chatgateway.features.admin.ToolchainService
 import bd.asap.cowork.chatgateway.features.admin.UsageService
 import bd.asap.cowork.chatgateway.features.admin.WorkspaceService
+import bd.asap.cowork.chatgateway.features.email.EmailService
 import bd.asap.cowork.chatgateway.features.notes.NoteService
+import bd.asap.cowork.chatgateway.features.notify.InAppNotificationChannel
 import bd.asap.cowork.chatgateway.features.plan.PlanService
 import bd.asap.cowork.chatgateway.features.project.ProjectFilesService
 import bd.asap.cowork.contextstore.ApiUsageRecord
 import bd.asap.cowork.contextstore.ApiUsageRepository
 import bd.asap.cowork.contextstore.ContextDatabase
 import bd.asap.cowork.contextstore.ConversationRepository
+import bd.asap.cowork.contextstore.EmailAccountRepository
+import bd.asap.cowork.contextstore.EmailSettingsRepository
 import bd.asap.cowork.contextstore.NoteRepository
 import bd.asap.cowork.contextstore.SettingsRepository
 import bd.asap.cowork.firebase.FirebaseCredentialsRegistry
@@ -60,10 +66,15 @@ import bd.asap.cowork.orchestrator.IntentClassifier
 import bd.asap.cowork.orchestrator.Orchestrator
 import bd.asap.cowork.orchestrator.ProjectContext
 import bd.asap.cowork.toolintegrations.ToolchainPathsRegistry
+import bd.asap.cowork.toolintegrations.email.GmailOAuthCredentialsRegistry
+import bd.asap.cowork.toolintegrations.notify.DesktopNotificationChannel
+import bd.asap.cowork.toolintegrations.notify.NotificationChannel
+import bd.asap.cowork.toolintegrations.notify.NotificationDispatcher
 import bd.asap.cowork.workspacehistory.WorkspaceHistoryService
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import kotlinx.coroutines.runBlocking
+import org.koin.core.qualifier.named
 import org.koin.dsl.module
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
@@ -81,6 +92,12 @@ fun appModule(contextDatabase: ContextDatabase) = module {
     single { NoteRepository(get()) }
     single { ConversationRepository(get()) }
     single { NoteService(get()) }
+    single { EmailAccountRepository(get()) }
+    single { EmailSettingsRepository(get()) }
+    single { EmailService(get(), get(), get()) }
+    single<NotificationChannel>(named("desktop")) { DesktopNotificationChannel() }
+    single<NotificationChannel>(named("in_app")) { InAppNotificationChannel() }
+    single { NotificationDispatcher(listOf(get<NotificationChannel>(named("desktop")), get<NotificationChannel>(named("in_app")))) }
     single { ProviderCredentialsStore(get()) }
     single { ApiUsageRepository(get()) }
     single {
@@ -149,6 +166,15 @@ fun appModule(contextDatabase: ContextDatabase) = module {
         FirebaseCredentialsRegistry.set(store.read())
         store
     }
+    single(createdAtStart = true) {
+        // Eager so GmailOAuthCredentialsRegistry is seeded at startup, not
+        // on the first admin request — EmailAgent's token-refresh path
+        // reads the registry synchronously, same reasoning as
+        // ToolchainPathsRegistry above.
+        val store = GmailOAuthCredentialsStore(get())
+        GmailOAuthCredentialsRegistry.set(runBlocking { store.read() })
+        store
+    }
     single {
         AgentRegistry().apply {
             register(RequirementsAgent(get()))
@@ -175,6 +201,7 @@ fun appModule(contextDatabase: ContextDatabase) = module {
             register(PublishingAgent(get()))
             register(NotesAgent(get(), get()))
             register(WorkspaceAgent())
+            register(EmailAgent(get(), get(), get(), get()))
             // Catch-all: registered last so every specialized capability above
             // gets first pick; only IntentClassifier's unmatched-reply fallback
             // and explicit Capability.GENERAL tasks reach it.

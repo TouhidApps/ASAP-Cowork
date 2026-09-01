@@ -29,6 +29,8 @@ data class StoredMessage(
     val content: String,
     val createdAt: Long = System.currentTimeMillis(),
     val attachments: List<StoredAttachment> = emptyList(),
+    /** Which [bd.asap.cowork.agentsdk.Capability] handled this turn — set on assistant messages only, null for user messages and anything stored before this column existed. Lets a later turn's routing look up "what was this conversation just doing" as a fact instead of inferring it from the reply text. */
+    val capability: String? = null,
 )
 
 @Serializable
@@ -53,6 +55,7 @@ object ChatMessagesTable : Table("chat_messages") {
     val role = text("role")
     val content = text("content")
     val createdAt = long("created_at")
+    val capability = text("capability").nullable()
     override val primaryKey = PrimaryKey(id)
 }
 
@@ -132,6 +135,7 @@ class ConversationRepository(private val db: Database) {
             it[role] = message.role
             it[content] = message.content
             it[createdAt] = message.createdAt
+            it[capability] = message.capability
         }
 
         message.attachments.forEach { attachment ->
@@ -169,6 +173,7 @@ class ConversationRepository(private val db: Database) {
         role = this[ChatMessagesTable.role],
         content = this[ChatMessagesTable.content],
         createdAt = this[ChatMessagesTable.createdAt],
+        capability = this[ChatMessagesTable.capability],
     )
 
     private fun ResultRow.toStoredAttachment() = StoredAttachment(

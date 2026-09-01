@@ -4,27 +4,59 @@ import '@/components/layout/appLayout.css'
 import '@/components/layout/adminLayout.css'
 import { useAdminAuth } from '@/features/admin/useAdminAuth'
 
-const navItems = [
-  { to: '/admin', label: 'Dashboard', end: true },
-  { to: '/admin/conversation', label: 'Conversation', end: false },
-  { to: '/admin/providers', label: 'Providers', end: false },
-  { to: '/admin/usage', label: 'Usage', end: false },
-  { to: '/admin/settings', label: 'Settings', end: false },
+interface AdminNavItem {
+  to: string
+  label: string
+  end: boolean
+}
+
+interface AdminNavSection {
+  /** Omitted for the top, unlabeled section of core admin pages. */
+  title?: string
+  items: AdminNavItem[]
+}
+
+/**
+ * Sectioned so groups of related pages can carry their own heading —
+ * "Tools" is the first such section (individual tool settings pages, e.g.
+ * Email) and is expected to grow as more tools are added, without needing
+ * another flat/sectioned nav rework.
+ */
+const navSections: AdminNavSection[] = [
+  {
+    items: [
+      { to: '/admin', label: 'Dashboard', end: true },
+      { to: '/admin/conversation', label: 'Conversation', end: false },
+      { to: '/admin/providers', label: 'Providers', end: false },
+      { to: '/admin/usage', label: 'Usage', end: false },
+      { to: '/admin/settings', label: 'Settings', end: false },
+    ],
+  },
+  {
+    title: 'Tools',
+    items: [{ to: '/admin/tools/email', label: 'Email', end: false }],
+  },
 ]
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <>
-      {navItems.map((item) => (
-        <NavLink
-          key={item.to}
-          to={item.to}
-          end={item.end}
-          onClick={onNavigate}
-          className={({ isActive }) => `admin-nav-link${isActive ? ' active' : ''}`}
-        >
-          {item.label}
-        </NavLink>
+      {navSections.map((section, index) => (
+        // index is stable — navSections is a module-level constant, never reordered/filtered at runtime.
+        <div className="admin-nav-section" key={section.title ?? index}>
+          {section.title && <div className="admin-nav-section-title">{section.title}</div>}
+          {section.items.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              onClick={onNavigate}
+              className={({ isActive }) => `admin-nav-link${isActive ? ' active' : ''}`}
+            >
+              {item.label}
+            </NavLink>
+          ))}
+        </div>
       ))}
     </>
   )

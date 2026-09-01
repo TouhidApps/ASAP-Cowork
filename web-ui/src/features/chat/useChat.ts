@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchConversationMessages, fetchConversations } from '@/features/chat/api'
 import type { Attachment, ChatEvent, ChatMessage, ChatStage, Conversation, NoteUsed, ToolActivity } from '@/features/chat/types'
+import { useNotifications } from '@/features/notifications/useNotifications'
 
 interface ChatState {
   conversations: Conversation[]
@@ -269,6 +270,14 @@ export function useChat() {
               .catch(() => {
                 // Non-critical background refresh — keep the stale list on failure.
               })
+            break
+          }
+          case 'notification': {
+            useNotifications.getState().push({
+              title: parsed.title ?? 'Notification',
+              body: parsed.message ?? '',
+              severity: parsed.severity === 'important' ? 'important' : 'info',
+            })
             break
           }
           case 'error': {

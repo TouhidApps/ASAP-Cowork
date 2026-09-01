@@ -72,6 +72,7 @@ export interface ChatEvent {
     | 'result'
     | 'error'
     | 'conversation_started'
+    | 'notification'
   message?: string
   text?: string
   path?: string
@@ -80,6 +81,10 @@ export interface ChatEvent {
   conversationId?: string
   tool?: string
   status?: 'started' | 'finished' | 'failed'
+  /** Only set on a `notification` event — see WireEvents.kt's ChatEvent doc comment. */
+  title?: string
+  /** Only set on a `notification` event. */
+  severity?: 'info' | 'important'
 }
 
 /** Mirrors context-store's Conversation.kt#Conversation. */

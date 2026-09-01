@@ -1,0 +1,138 @@
+.email-settings {
+  padding: 16px 20px;
+  max-width: 560px;
+  overflow-y: auto;
+}
+
+.email-settings-title {
+  font-size: 18px;
+  color: var(--text-h);
+  margin: 0 0 4px;
+}
+
+.email-settings-hint {
+  font-size: 13px;
+  color: var(--text);
+  opacity: 0.75;
+  margin: 0 0 20px;
+}
+
+.email-settings-section {
+  margin-bottom: 24px;
+}
+
+.email-settings-section h3 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  opacity: 0.65;
+  margin: 0 0 10px;
+}
+
+.email-account-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+}
+
+.email-account-checkbox,
+.email-settings-checkbox,
+.email-settings-radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-h);
+  font-size: 14px;
+  padding: 6px 0;
+  cursor: pointer;
+}
+
+.email-account-default-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--code-bg);
+  color: var(--text);
+}
+
+.email-settings-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-h);
+  font-size: 14px;
+  padding: 6px 0;
+}
+
+.email-settings-number {
+  width: 60px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--accent-border);
+  background: var(--bg);
+  color: var(--text-h);
+  font: inherit;
+}
+
+.email-settings-field-column {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  color: var(--text-h);
+  font-size: 14px;
+  padding: 6px 0;
+}
+
+.email-settings-text {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--accent-border);
+  background: var(--bg);
+  color: var(--text-h);
+  font: inherit;
+}
+
+.email-settings-code {
+  display: block;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--code-bg);
+  color: var(--text-h);
+  font-size: 12px;
+  word-break: break-all;
+  margin-top: 6px;
+  margin-bottom: 4px;
+}
+
+.email-settings-steps {
+  margin: 0 0 16px;
+  padding-left: 20px;
+  font-size: 13px;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.email-settings-steps a {
+  color: var(--accent);
+}
+
+.email-settings-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.email-settings-notice {
+  font-size: 13px;
+  color: #3a9d5d;
+}

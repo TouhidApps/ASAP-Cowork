@@ -1,5 +1,6 @@
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { ConnectionStatus } from '@/components/ConnectionStatus'
+import { NotificationToast } from '@/features/notifications/components/NotificationToast'
 import { ChatPage } from '@/pages/ChatPage'
 import { NotesPage } from '@/pages/NotesPage'
 import '@/components/layout/appLayout.css'
@@ -16,6 +17,7 @@ export function AppLayout() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+      <NotificationToast />
       <header className="app-header">
         <Link to="/" className="app-brand">
           <img src="/icon.png" alt="" className="app-brand-mark" />

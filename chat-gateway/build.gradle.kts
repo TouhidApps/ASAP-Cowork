@@ -84,6 +84,7 @@ dependencies {
     implementation(project(":agents:notes-agent"))
     implementation(project(":agents:workspace-agent"))
     implementation(project(":agents:general-purpose-agent"))
+    implementation(project(":agents:email-agent"))
 
     implementation("io.ktor:ktor-server-core")
     implementation("io.ktor:ktor-server-netty")

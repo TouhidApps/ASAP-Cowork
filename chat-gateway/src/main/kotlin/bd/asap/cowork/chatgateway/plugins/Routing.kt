@@ -9,6 +9,7 @@ import bd.asap.cowork.chatgateway.IncomingMessage
 import bd.asap.cowork.chatgateway.common.ApiResponse
 import bd.asap.cowork.chatgateway.features.admin.adminRoutes
 import bd.asap.cowork.chatgateway.features.chat.chatRoutes
+import bd.asap.cowork.chatgateway.features.email.emailOAuthCallbackRoute
 import bd.asap.cowork.chatgateway.features.history.historyRoutes
 import bd.asap.cowork.chatgateway.features.logcat.logcatRoutes
 import bd.asap.cowork.chatgateway.features.notes.notesRoutes
@@ -36,6 +37,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.koin.ktor.ext.inject
 import java.io.File
+import java.util.UUID
 
 /**
  * `GET /health` proves routing -> DI -> orchestrator wiring is intact.
@@ -69,6 +71,7 @@ fun Application.configureRouting() {
 
         adminRoutes()
         notesRoutes()
+        emailOAuthCallbackRoute()
         chatRoutes()
         logcatRoutes()
         historyRoutes()
@@ -143,10 +146,17 @@ fun Application.configureRouting() {
             val requestedId = call.request.queryParameters["conversationId"]?.takeIf { it.isNotBlank() }
             var activeConversationId: String? = requestedId?.takeIf { conversation.findConversation(it) != null }
 
+            // Registered so a background push (the email agent's poll, via
+            // ChatSocketRegistry.broadcast) can reach this connection even
+            // between user messages — see ChatSocketRegistry's doc comment.
+            val socketId = UUID.randomUUID().toString()
+            ChatSocketRegistry.register(socketId, this)
+
             activeConversationId?.let { id ->
                 send(Frame.Text(Json.encodeToString<ChatEvent>(ChatEvent(type = "conversation_started", conversationId = id))))
             }
 
+            try {
             for (frame in incoming) {
                 if (frame !is Frame.Text) continue
                 val text = frame.readText()
@@ -162,7 +172,7 @@ fun Application.configureRouting() {
                 // Fetched before appending this turn's own message below, so
                 // it's exactly what came before — the agent gets the new
                 // message separately as `input`, same as every other call site.
-                val history = conversation.getMessages(conversationId).map { ConversationTurn(it.role, it.content) }
+                val history = conversation.getMessages(conversationId).map { ConversationTurn(it.role, it.content, it.capability) }
 
                 conversation.appendMessage(
                     conversationId,
@@ -181,6 +191,7 @@ fun Application.configureRouting() {
                 }
 
                 val assistantReply = StringBuilder()
+                var activatedCapability: String? = null
 
                 // Bootstraps the shadow history repo against whatever's on disk *before*
                 // this turn's own edits land, so the commitIfDirty call below captures only
@@ -190,12 +201,13 @@ fun Application.configureRouting() {
 
                 orchestrator.route(incomingMessage.content, history = history, attachments = attachments).collect { event ->
                     if (event is AgentEvent.TextDelta) assistantReply.append(event.text)
+                    if (event is AgentEvent.AgentActivated) activatedCapability = event.capability
                     send(Frame.Text(Json.encodeToString<ChatEvent>(event.toWire())))
                 }
 
                 var assistantMessageId: String? = null
                 if (assistantReply.isNotEmpty()) {
-                    val assistantMessage = StoredMessage(role = "assistant", content = assistantReply.toString())
+                    val assistantMessage = StoredMessage(role = "assistant", content = assistantReply.toString(), capability = activatedCapability)
                     assistantMessageId = assistantMessage.id
                     conversation.appendMessage(conversationId, assistantMessage)
                 }
@@ -208,6 +220,9 @@ fun Application.configureRouting() {
                     messageId = assistantMessageId,
                     label = assistantReply.toString().ifBlank { "Workspace changes" },
                 )
+            }
+            } finally {
+                ChatSocketRegistry.unregister(socketId)
             }
         }
 

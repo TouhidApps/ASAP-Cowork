@@ -8,4 +8,15 @@ package bd.asap.cowork.agentsdk
  * must not depend on llm-gateway, so each agent (which does depend on it)
  * converts this to a `ChatMessage` itself.
  */
-data class ConversationTurn(val role: String, val content: String)
+data class ConversationTurn(
+    val role: String,
+    val content: String,
+    /**
+     * Which [Capability] handled this turn — set on assistant turns only,
+     * null for user turns. Exists so `IntentClassifier` can look up "what
+     * was this conversation just doing" as a fact instead of inferring
+     * continuity purely from the reply text, which routing history showed
+     * is unreliable for a short/vague follow-up with no domain keywords.
+     */
+    val capability: String? = null,
+)

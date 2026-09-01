@@ -15,7 +15,11 @@ data class IncomingMessage(val content: String, val attachments: List<StoredAtta
  * emits it directly once a connection's conversation id is known (resumed
  * from the `conversationId` query param, or just lazily created on the
  * first message), so the client can learn a freshly-created id and keep its
- * history drawer in sync.
+ * history drawer in sync. `notification` also isn't an [AgentEvent] — it's
+ * broadcast by ChatSocketRegistry/InAppNotificationChannel outside any
+ * particular conversation's request/response flow (e.g. the email agent's
+ * background poll finding new mail), so it carries its own [title] rather
+ * than reusing [agentId]'s per-message meaning.
  */
 @Serializable
 data class ChatEvent(
@@ -28,6 +32,9 @@ data class ChatEvent(
     val conversationId: String? = null,
     val tool: String? = null,
     val status: String? = null,
+    val title: String? = null,
+    /** Only set on a `notification` event — kept separate from [status] since [AgentEvent.ToolActivity] already gives that field its own started/finished/failed meaning. */
+    val severity: String? = null,
 )
 
 fun AgentEvent.toWire(): ChatEvent = when (this) {

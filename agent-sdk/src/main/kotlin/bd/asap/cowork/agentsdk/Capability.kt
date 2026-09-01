@@ -33,5 +33,6 @@ value class Capability(val id: String) {
         val NOTES = Capability("notes")
         val WORKSPACE = Capability("workspace")
         val GENERAL = Capability("general")
+        val EMAIL = Capability("email")
     }
 }

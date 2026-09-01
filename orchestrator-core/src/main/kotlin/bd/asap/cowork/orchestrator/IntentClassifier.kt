@@ -25,9 +25,20 @@ class IntentClassifier(private val providers: LlmProviderRegistry) {
         val roster = candidates.joinToString("\n") { agent ->
             "- ${agent.capabilities.joinToString(",") { it.id }}: ${agent.description}"
         }
+        // A recorded fact beats an inference: each stored assistant turn is
+        // tagged with the capability that actually handled it (see
+        // ConversationTurn.capability), so "what was this conversation just
+        // doing" is a lookup here, not something the model has to guess from
+        // prose — a guess that repeatedly failed for short/keyword-free
+        // follow-ups (e.g. "add a footer: Thank you" after Sheets activity).
+        val lastActiveCapability = history.lastOrNull { it.role == "assistant" && it.capability != null }?.capability
         val systemPrompt = buildString {
             appendLine("You route a user's chat message to exactly one capability id from this list:")
             appendLine(roster)
+            if (lastActiveCapability != null) {
+                appendLine("Fact: the capability that handled the most recent assistant turn in this conversation was '$lastActiveCapability'. Default to routing the new message there too, UNLESS it plainly and specifically asks for something a different capability in the list actually owns — a topic sounding generic or unrelated in isolation is not enough on its own to switch away, since a short follow-up (an edit, an addition, a correction, a bare value/phrase with no explicit object) naturally carries no keywords of its own and still belongs to the same capability as what it's following up on.")
+            }
+            appendLine("Only pick a generic/catch-all capability (if one exists in the list) when the message is genuinely a fresh, standalone request unrelated to whatever the conversation was just in the middle of — never as a default for a short or vague-sounding message that is actually a continuation.")
             appendLine("Reply with ONLY the capability id, nothing else — no punctuation, no explanation.")
         }
 
