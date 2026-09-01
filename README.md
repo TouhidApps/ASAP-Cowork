@@ -63,6 +63,7 @@ It's designed to cover the **full lifecycle** of building a mobile app:
 - Running and debugging on an emulator, including reading logcat output
 - Capturing screenshots and video from the emulator
 - Uploading builds to Firebase App Distribution and Google Play Console
+- Checking, searching, sending, and replying to Gmail, and listing, creating, reading, and editing Google Sheets (including live formulas), reading Google Docs, and viewing Google Calendar — all from one connected Google account
 
 All of it is driven through a single streaming chat UI.
 
@@ -74,6 +75,9 @@ All of it is driven through a single streaming chat UI.
 - 🛠️ **Real tool integrations** — Gradle, `xcodebuild`, Flutter CLI, ADB, iOS Simulator (`simctl`), Firebase CLI — the agents drive actual developer tooling rather than simulating it.
 - 🖥️ **Isolated build execution** — a dedicated `build-runner` service owns all builds, emulator, and device access, keeping untrusted/generated code execution away from the orchestrator process.
 - 💬 **Streaming chat UI** — a React front end that renders agent activity, file diffs, and live logs (e.g. logcat) incrementally over WebSockets.
+- 📧 **Gmail & Google Workspace integration** — connect a Google account via OAuth (Admin > Tools > Email) to check, search, send, and reply to Gmail; list, create, read, and edit Google Sheets (including writing live formulas); read Google Docs; and view upcoming Google Calendar events. A background poller checks for new mail and can push in-app/desktop notifications for it.
+- 🕘 **Workspace change history** — every chat turn's file edits are tracked in a shadow git history, viewable and diffable from the UI without touching your own git state.
+- 💰 **Usage & cost tracking** — per-provider token/cost accounting surfaced in the admin panel.
 - 📦 **Runs anywhere** — as a set of dev processes via one script, or as a self-contained packaged jar a non-technical user can double-click.
 
 ## Architecture
@@ -125,6 +129,7 @@ For the full architectural rationale, module breakdown, and phased roadmap, see 
 | Mobile targets | Kotlin/Android, Swift/iOS, Kotlin Multiplatform, Flutter, React Native |
 | Backend targets | Spring Boot (Kotlin/Java), Node.js |
 | Distribution | Firebase App Distribution API, Google Play Developer API |
+| Google Workspace | Gmail, Sheets, Docs, Calendar, and Drive (metadata) APIs via one Google OAuth 2.0 connection |
 
 ## Project Structure
 
@@ -155,9 +160,14 @@ asap-cowork/
 │   ├── analytics-agent/
 │   ├── security-review-agent/
 │   ├── performance-agent/
-│   └── notes-agent/
-├── tool-integrations/          # Thin clients over Gradle, ADB, xcodebuild, Firebase, etc.
+│   ├── notes-agent/
+│   ├── workspace-agent/
+│   ├── general-purpose-agent/  # Catch-all for requests no specialist agent owns
+│   └── email-agent/            # Gmail, Google Sheets/Docs/Calendar via one connected account
+├── tool-integrations/          # Thin clients over Gradle, ADB, xcodebuild, Firebase, Gmail/Sheets/Docs/Calendar/Drive, etc.
+├── firebase-integration/       # Firebase App Distribution client
 ├── context-store/              # ProjectContext persistence (Exposed/SQLite)
+├── workspace-history/          # Shadow git history behind the workspace change viewer
 ├── llm-gateway/                # Multi-provider LLM access, prompt templates
 ├── build-runner/               # Isolated build/emulator/device execution service
 ├── chat-gateway/                # Ktor WebSocket/REST server, bundles the built web-ui
@@ -375,6 +385,16 @@ All configuration lives in a single `.env` file at the repo root (or next to the
 | `WORKSPACE_ROOT_PATH` | Where generated projects are written (defaults to `./workspace`) |
 | `FIREBASE_APP_ID` / `FIREBASE_CI_TOKEN` / `FIREBASE_TESTER_GROUPS` / `FIREBASE_RELEASE_NOTES` | Firebase App Distribution publishing — configurable from the admin panel instead |
 | `ALLOWED_HOSTS` | Extra hosts allowed to call the server (CORS) — e.g. a phone on Tailscale |
+
+### Connecting Gmail & Google Workspace
+
+Unlike the LLM providers above, Gmail/Sheets/Docs/Calendar access isn't configured via `.env` — it's set up from the running app:
+
+1. In [Google Cloud Console](https://console.cloud.google.com), create an OAuth 2.0 Client ID (type "Web application") and enable the Gmail, Sheets, Docs, Calendar, and Drive APIs on that project.
+2. In ASAP-Cowork, go to **Admin > Tools > Email**, paste in the Client ID and Client Secret, and click connect — this walks you through Google's consent screen.
+3. Once connected, just ask the chat to check your email, list your spreadsheets, read a doc, or check your calendar.
+
+If you add a new Google API scope later (e.g. after an update), reconnect the account from the same page so the new permissions take effect.
 
 ## Project Status
 
