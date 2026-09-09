@@ -36,6 +36,7 @@ fun Route.adminRoutes() {
         // joins the same way, each in its own feature package.
         route("/tools") {
             emailToolsRoutes()
+            imageAiToolsRoutes()
         }
 
         route("/workspace") {

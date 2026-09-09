@@ -1,5 +1,6 @@
 package bd.asap.cowork.toolintegrations
 
+import bd.asap.cowork.agentsdk.Workspace
 import bd.asap.cowork.llmgateway.ToolResult
 import bd.asap.cowork.llmgateway.ToolSpec
 import kotlinx.coroutines.Dispatchers
@@ -7,6 +8,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
+import java.nio.file.Files
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
@@ -35,6 +37,10 @@ object IosVideoTool {
                     "type" to "integer",
                     "description" to "Recording length in seconds. Defaults to $DEFAULT_SECONDS, capped at $MAX_SECONDS.",
                 ),
+                "directory" to mapOf(
+                    "type" to "string",
+                    "description" to "The project directory this recording is for (the same value passed to build tools), so it nests under that project instead of the shared workspace root.",
+                ),
             ),
             "required" to emptyList<String>(),
         ),
@@ -45,9 +51,13 @@ object IosVideoTool {
             ?: return@withContext ToolResult("No simulator is booted. Start one with manage_ios_simulator first.", isError = true)
 
         val seconds = ((input["seconds"] as? Number)?.toInt() ?: DEFAULT_SECONDS).coerceIn(1, MAX_SECONDS)
-        val videosDir = File(workspaceRoot, ".asap-videos").apply { mkdirs() }
+        val directory = normalizedProjectDirectory(input["directory"] as? String)
         val filename = "sim-${System.currentTimeMillis()}-${UUID.randomUUID().toString().take(8)}.mp4"
-        val outputFile = File(videosDir, filename)
+        val relativePath = projectRelativePath(directory, ".asap-videos", filename)
+        val outputPath = Workspace(workspaceRoot.toPath()).resolve(relativePath)
+            ?: return@withContext ToolResult("Invalid directory: $directory", isError = true)
+        Files.createDirectories(outputPath.parent)
+        val outputFile = outputPath.toFile()
 
         try {
             val builder = ProcessBuilder("xcrun", "simctl", "io", udid, "recordVideo", "--codec=h264", outputFile.absolutePath)
@@ -68,7 +78,7 @@ object IosVideoTool {
                 return@withContext ToolResult("Failed to record video — no output was produced.", isError = true)
             }
 
-            ToolResult("Recorded a ${seconds}s video of the simulator.", videoUrl = "/api/v1/videos/$filename")
+            ToolResult("Recorded a ${seconds}s video of the simulator.", videoUrl = projectAssetUrl(directory, "/api/v1/videos", filename))
         } catch (e: IOException) {
             ToolResult(
                 "\"xcrun simctl\" isn't available (${e.message}) — this requires the full Xcode.app, not just the Command Line Tools.",

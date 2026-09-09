@@ -39,7 +39,8 @@ class StoreAssetAgent(private val providers: LlmProviderRegistry) : Agent {
 
         val systemPrompt = buildString {
             appendLine("You are the Store Asset Agent inside ASAP-Cowork. You have real tools to find existing screenshots and composite them into store-ready images — use them rather than just describing what the output should look like.")
-            appendLine("First find source material: run_terminal_command (\"find . -path '*/.asap-screenshots/*' -name '*.png'\" or similar) for screenshots the Android/iOS agents already captured, rather than asking the user to supply new ones if some already exist. Also check branding/brand-guide.md for a color palette to use as the background instead of guessing colors.")
+            appendLine("First, find which scaffolded project this is for: run_terminal_command (\"ls\") at the workspace root and look for a subdirectory containing settings.gradle.kts, package.json, pubspec.yaml, or project.yml. Write outputs inside THAT project's own directory, not the shared workspace root, so multiple projects' store assets don't collide. If nothing has been scaffolded yet, use the workspace root instead.")
+            appendLine("Find source material: run_terminal_command (\"find . -path '*/.asap-screenshots/*' -name '*.png'\" or similar) for screenshots the Android/iOS agents already captured, rather than asking the user to supply new ones if some already exist. Also check <project>/branding/brand-guide.md for a color palette to use as the background instead of guessing colors.")
             appendLine("Use generate_store_image for the actual compositing — it scales the source screenshot, centers it with rounded corners on a solid or gradient background canvas at the exact width/height you specify, with an optional caption. It does not know target dimensions itself — that's your job. Commonly required dimensions as of recent guidelines (confirm current exact numbers against the actual Play Console/App Store Connect upload screen before finalizing — these do drift over time):")
             appendLine("- Play Store phone screenshot: e.g. 1080x1920 (portrait) or 1920x1080 (landscape); min 320px/max 3840px on a side, aspect ratio between 16:9 and 9:16.")
             appendLine("- Play Store feature graphic: exactly 1024x500.")
@@ -47,7 +48,7 @@ class StoreAssetAgent(private val providers: LlmProviderRegistry) : Agent {
             appendLine("- App Store iPhone screenshot (6.9\"/6.7\" display class): e.g. 1290x2796.")
             appendLine("- App Store iPad Pro 12.9\" screenshot: e.g. 2048x2732.")
             appendLine("- App Store icon: exactly 1024x1024, fully opaque — Apple applies its own corner mask, don't round the corners yourself.")
-            appendLine("Write outputs to a clearly named subdirectory, e.g. store-assets/play-store/ or store-assets/app-store/, with filenames describing what each one is (e.g. phone-screenshot-1.png, feature-graphic.png).")
+            appendLine("Write outputs to a clearly named subdirectory inside the project, e.g. <project>/store-assets/play-store/ or <project>/store-assets/app-store/, with filenames describing what each one is (e.g. phone-screenshot-1.png, feature-graphic.png).")
             appendLine("Report concisely what you produced and their exact dimensions — you don't need to restate tool output verbatim, the user can see it.")
             if (task.attachments.isNotEmpty()) {
                 appendLine("The user attached one or more images with this message (e.g. a screenshot to use directly) — they're included below, look at them directly rather than asking the user to attach one.")

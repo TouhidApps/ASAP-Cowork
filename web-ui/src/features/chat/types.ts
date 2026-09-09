@@ -33,11 +33,17 @@ export interface NoteUsed {
   snippet: string
 }
 
-/** A screenshot/video (or attached image) opened full-size in MediaLightbox, tracked by MessageList. */
-export interface OpenMedia {
+/** One screenshot/video/generated-image thumbnail. */
+export interface MediaItem {
   kind: 'image' | 'video'
   src: string
   alt?: string
+}
+
+/** The full set of media items in the message that was clicked, plus which one — lets MediaLightbox navigate prev/next within the same message instead of only showing the one clicked. Tracked by MessageList. */
+export interface OpenMedia {
+  items: MediaItem[]
+  index: number
 }
 
 /** Client-side chat message shown in MessageList/MessageBubble. */

@@ -5,6 +5,7 @@ include(
     ":llm-gateway",
     ":tool-integrations",
     ":firebase-integration",
+    ":image-gen-integration",
     ":context-store",
     ":orchestrator-core",
     ":workspace-history",
@@ -36,4 +37,5 @@ include(
     ":agents:workspace-agent",
     ":agents:general-purpose-agent",
     ":agents:email-agent",
+    ":agents:imaging-agent",
 )

@@ -1,18 +1,21 @@
 import { Fragment } from 'react'
+import type { ReactNode } from 'react'
 import DOMPurify from 'dompurify'
 import { marked } from 'marked'
 import { API_BASE_URL } from '@/api/client'
 import { AssistantAvatarIcon, CheckIcon, CloseIcon, NoteIcon, PlayIcon, UserIcon } from '@/features/chat/icons'
 import { STAGES } from '@/features/chat/types'
-import type { ChatMessage, NoteUsed, OpenMedia, ToolActivity } from '@/features/chat/types'
+import type { ChatMessage, MediaItem, NoteUsed, OpenMedia, ToolActivity } from '@/features/chat/types'
 
 const stageLabel = (stage: ChatMessage['stage']) => STAGES.find((s) => s.id === stage)?.label ?? stage
 
 // Matches the one markdown-image line emitMediaNotes (llm-gateway's
 // ToolCalling.kt) appends after a tool result with an imageUrl — a device/
-// simulator screenshot (/api/v1/screenshots/...) or a branding SVG written
-// by write_brand_asset (/api/v1/branding/...), e.g. ![Screenshot](/api/v1/screenshots/x.png).
-const IMAGE_LINE = /^!\[([^\]]*)\]\((\/api\/v1\/(?:screenshots|branding)\/[^\s)]+)\)$/
+// simulator screenshot (/api/v1/screenshots/...), a branding SVG written by
+// write_brand_asset (/api/v1/branding/...), or a generated/edited/optimized
+// image written by ImagingAgent's tools (/api/v1/images/...), e.g.
+// ![Screenshot](/api/v1/screenshots/x.png).
+const IMAGE_LINE = /^!\[([^\]]*)\]\((\/api\/v1\/(?:screenshots|branding|images)\/[^\s)]+)\)$/
 // Matches the one markdown-style video line emitMediaNotes appends after a
 // record_device_video tool call, e.g. [Video](/api/v1/videos/x.mp4).
 const VIDEO_LINE = /^\[Video\]\((\/api\/v1\/videos\/[^\s)]+)\)$/
@@ -45,8 +48,40 @@ function renderContent(content: string, onOpenMedia: (media: OpenMedia) => void)
   // this message drops that second, redundant line instead of showing the
   // same image/video twice.
   const seenMediaUrls = new Set<string>()
+  const lines = content.split('\n')
 
-  return content.split('\n').map((line, index) => {
+  // Every non-duplicate image in this message, in order — the group a click
+  // opens into the lightbox with prev/next navigation, regardless of which
+  // thumbnail strip it visually landed in.
+  const galleryItems: MediaItem[] = []
+  const galleryDeduper = new Set<string>()
+  lines.forEach((line) => {
+    const match = IMAGE_LINE.exec(line)
+    if (match && !galleryDeduper.has(match[2])) {
+      galleryDeduper.add(match[2])
+      galleryItems.push({ kind: 'image', src: `${API_BASE_URL}${match[2]}`, alt: match[1] || 'Screenshot' })
+    }
+  })
+
+  const elements: ReactNode[] = []
+  let pendingStrip: ReactNode[] = []
+  let galleryIndex = 0
+
+  // emitMediaNotes wraps every media line in blank lines, so two images from
+  // separate tool calls never land on truly adjacent lines — swallowing a
+  // blank line while a strip is open lets them still group into one
+  // slideable gallery instead of splitting on that natural gap.
+  const flushStrip = (key: string) => {
+    if (pendingStrip.length === 0) return
+    elements.push(
+      <div className="chat-thumbnail-strip" key={`strip-${key}`}>
+        {pendingStrip}
+      </div>,
+    )
+    pendingStrip = []
+  }
+
+  lines.forEach((line, index) => {
     const imageMatch = IMAGE_LINE.exec(line)
     const videoMatch = VIDEO_LINE.exec(line)
     const fileMatch = FILE_LINE.exec(line)
@@ -55,16 +90,28 @@ function renderContent(content: string, onOpenMedia: (media: OpenMedia) => void)
     const isDuplicateMedia = mediaUrl !== undefined && seenMediaUrls.has(mediaUrl)
     if (mediaUrl !== undefined) seenMediaUrls.add(mediaUrl)
 
-    const body = isDuplicateMedia
-      ? null
-      : imageMatch ? (
+    if (imageMatch) {
+      if (!isDuplicateMedia) {
+        const clickIndex = galleryIndex
+        galleryIndex += 1
+        pendingStrip.push(
           <img
+            key={mediaUrl}
             src={`${API_BASE_URL}${imageMatch[2]}`}
             alt={imageMatch[1] || 'Screenshot'}
             className="chat-screenshot"
-            onClick={() => onOpenMedia({ kind: 'image', src: `${API_BASE_URL}${imageMatch[2]}`, alt: imageMatch[1] })}
-          />
-        ) : videoMatch ? (
+            onClick={() => onOpenMedia({ items: galleryItems, index: clickIndex })}
+          />,
+        )
+      }
+      return
+    }
+    if (line === '' && pendingStrip.length > 0) return
+    flushStrip(String(index))
+
+    const body = isDuplicateMedia
+      ? null
+      : videoMatch ? (
           // No native `controls` on the thumbnail — with controls, a click both
           // toggles play/pause *and* opens the lightbox at once. Full playback
           // controls only show once it's open full-size. The play icon overlay
@@ -73,7 +120,9 @@ function renderContent(content: string, onOpenMedia: (media: OpenMedia) => void)
           // frame — indistinguishable from a static image otherwise.
           <div
             className="chat-video-thumb"
-            onClick={() => onOpenMedia({ kind: 'video', src: `${API_BASE_URL}${videoMatch[1]}` })}
+            onClick={() =>
+              onOpenMedia({ items: [{ kind: 'video', src: `${API_BASE_URL}${videoMatch[1]}` }], index: 0 })
+            }
           >
             <video src={`${API_BASE_URL}${videoMatch[1]}`} className="chat-video" muted />
             <span className="chat-video-play-icon" aria-hidden="true">
@@ -94,13 +143,16 @@ function renderContent(content: string, onOpenMedia: (media: OpenMedia) => void)
         ) : (
           renderInlineMarkdown(line)
         )
-    return (
+    elements.push(
       <Fragment key={index}>
         {index > 0 && '\n'}
         {body}
-      </Fragment>
+      </Fragment>,
     )
   })
+
+  flushStrip('end')
+  return elements
 }
 
 function ToolActivityList({ activities }: { activities: ToolActivity[] }) {

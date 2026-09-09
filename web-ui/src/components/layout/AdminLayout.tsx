@@ -34,7 +34,10 @@ const navSections: AdminNavSection[] = [
   },
   {
     title: 'Tools',
-    items: [{ to: '/admin/tools/email', label: 'Email', end: false }],
+    items: [
+      { to: '/admin/tools/email', label: 'Email', end: false },
+      { to: '/admin/tools/image-ai', label: 'Image AI', end: false },
+    ],
   },
 ]
 

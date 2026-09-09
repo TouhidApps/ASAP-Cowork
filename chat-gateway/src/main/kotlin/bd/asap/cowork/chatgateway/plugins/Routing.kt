@@ -54,6 +54,22 @@ import java.util.UUID
  * `/api/v1/notes` is a personal scratchpad, unrelated to chat — see
  * NoteRoutes.kt.
  */
+/**
+ * Resolves a `{path...}` tail wildcard against `<projectRoot>/<directory>/<folder>/<filename>`
+ * — everything but the last path segment is an optional scaffolded
+ * project's directory name (e.g. `branding/WeatherNow/logo.svg` resolves to
+ * `<projectRoot>/WeatherNow/branding/logo.svg`), matching how
+ * WriteBrandAssetTool/GenerateImageTool nest [folder] inside a specific
+ * project instead of the shared workspace root. Returns `null` (-> 400) for
+ * an empty, blank, or path-traversing segment.
+ */
+private fun projectScopedFile(projectRoot: File, folder: String, segments: List<String>?): File? {
+    if (segments.isNullOrEmpty() || segments.any { it.isBlank() || it == ".." || "/" in it || "\\" in it }) return null
+    val directory = segments.dropLast(1)
+    val filename = segments.last()
+    return File(projectRoot, (directory + folder + filename).joinToString("/"))
+}
+
 fun Application.configureRouting() {
     val orchestrator by inject<Orchestrator>()
     val conversation by inject<ConversationRepository>()
@@ -78,13 +94,16 @@ fun Application.configureRouting() {
         planRoutes()
         projectRoutes()
 
-        get("/api/v1/screenshots/{filename}") {
-            val filename = call.parameters["filename"]
-            if (filename.isNullOrBlank() || "/" in filename || ".." in filename) {
+        // Tail wildcard, same project-directory-nesting scheme as branding/
+        // and images/ below — everything but the last segment is the
+        // scaffolded project's directory name, e.g.
+        // /api/v1/screenshots/MyApp/device-123.png.
+        get("/api/v1/screenshots/{path...}") {
+            val file = projectScopedFile(File(projectContext.workspaceRoot), ".asap-screenshots", call.parameters.getAll("path"))
+            if (file == null) {
                 call.respond(HttpStatusCode.BadRequest)
                 return@get
             }
-            val file = File(projectContext.workspaceRoot, ".asap-screenshots/$filename")
             if (!file.exists()) {
                 call.respond(HttpStatusCode.NotFound)
                 return@get
@@ -92,13 +111,12 @@ fun Application.configureRouting() {
             call.respondBytes(file.readBytes(), ContentType.Image.PNG)
         }
 
-        get("/api/v1/videos/{filename}") {
-            val filename = call.parameters["filename"]
-            if (filename.isNullOrBlank() || "/" in filename || ".." in filename) {
+        get("/api/v1/videos/{path...}") {
+            val file = projectScopedFile(File(projectContext.workspaceRoot), ".asap-videos", call.parameters.getAll("path"))
+            if (file == null) {
                 call.respond(HttpStatusCode.BadRequest)
                 return@get
             }
-            val file = File(projectContext.workspaceRoot, ".asap-videos/$filename")
             if (!file.exists()) {
                 call.respond(HttpStatusCode.NotFound)
                 return@get
@@ -109,14 +127,18 @@ fun Application.configureRouting() {
         // Serves whatever BrandingAgent wrote via write_brand_asset (SVG
         // logos, brand-guide.md) — an unrecognized extension falls back to
         // a generic download rather than 404ing, since write_brand_asset
-        // accepts any filename.
-        get("/api/v1/branding/{filename}") {
-            val filename = call.parameters["filename"]
-            if (filename.isNullOrBlank() || "/" in filename || ".." in filename) {
+        // accepts any filename. A tail wildcard rather than one {filename}
+        // segment: everything but the last segment is the scaffolded
+        // project's directory name (e.g. /api/v1/branding/WeatherNow/logo.svg),
+        // matching how write_brand_asset nests branding/ inside that project
+        // instead of the shared workspace root, so multiple projects' brand
+        // assets don't collide.
+        get("/api/v1/branding/{path...}") {
+            val file = projectScopedFile(File(projectContext.workspaceRoot), "branding", call.parameters.getAll("path"))
+            if (file == null) {
                 call.respond(HttpStatusCode.BadRequest)
                 return@get
             }
-            val file = File(projectContext.workspaceRoot, "branding/$filename")
             if (!file.exists()) {
                 call.respond(HttpStatusCode.NotFound)
                 return@get
@@ -129,6 +151,23 @@ fun Application.configureRouting() {
                 else -> ContentType.Application.OctetStream
             }
             call.respondBytes(file.readBytes(), contentType)
+        }
+
+        // Serves whatever ImagingAgent wrote via generate_image/edit_image/
+        // optimize_image — always PNG (all three tools always write PNG
+        // bytes). Same project-directory-nesting tail wildcard as branding/
+        // above — see its comment.
+        get("/api/v1/images/{path...}") {
+            val file = projectScopedFile(File(projectContext.workspaceRoot), "images", call.parameters.getAll("path"))
+            if (file == null) {
+                call.respond(HttpStatusCode.BadRequest)
+                return@get
+            }
+            if (!file.exists()) {
+                call.respond(HttpStatusCode.NotFound)
+                return@get
+            }
+            call.respondBytes(file.readBytes(), ContentType.Image.PNG)
         }
 
         webSocket("/ws/chat") {

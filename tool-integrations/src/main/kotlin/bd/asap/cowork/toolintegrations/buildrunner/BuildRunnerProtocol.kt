@@ -22,7 +22,11 @@ data class ResultLine(
     val summary: String,
     val isError: Boolean = false,
     val imageUrl: String? = null,
+    /** Alt text for [imageUrl] — see [bd.asap.cowork.llmgateway.ToolResult.imageAlt]. */
+    val imageAlt: String? = null,
     val videoUrl: String? = null,
+    /** A non-image, non-video file worth surfacing as a clickable link — see [bd.asap.cowork.llmgateway.ToolResult.fileUrl]. */
+    val fileUrl: String? = null,
     val notice: String? = null,
     val type: String = "result",
 )

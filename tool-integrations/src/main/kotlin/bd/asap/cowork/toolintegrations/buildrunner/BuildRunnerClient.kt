@@ -71,7 +71,9 @@ class BuildRunnerClient(
                     summary = element.stringOrNull("summary").orEmpty(),
                     isError = element["isError"]?.jsonPrimitive?.content?.toBoolean() ?: false,
                     imageUrl = element.stringOrNull("imageUrl"),
+                    imageAlt = element.stringOrNull("imageAlt"),
                     videoUrl = element.stringOrNull("videoUrl"),
+                    fileUrl = element.stringOrNull("fileUrl"),
                     notice = element.stringOrNull("notice"),
                 )
             }

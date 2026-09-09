@@ -9,6 +9,7 @@ import { AdminProvidersPage } from '@/pages/AdminProvidersPage'
 import { AdminUsagePage } from '@/pages/AdminUsagePage'
 import { AdminWorkspacePage } from '@/pages/AdminWorkspacePage'
 import { EmailPage } from '@/pages/EmailPage'
+import { ImageAiPage } from '@/pages/ImageAiPage'
 
 /**
  * `/` and `/notes` are registered here only so the URL and NavLink active
@@ -39,6 +40,7 @@ export const router = createBrowserRouter([
           { path: 'usage', element: <AdminUsagePage /> },
           { path: 'settings', element: <AdminWorkspacePage /> },
           { path: 'tools/email', element: <EmailPage /> },
+          { path: 'tools/image-ai', element: <ImageAiPage /> },
         ],
       },
     ],

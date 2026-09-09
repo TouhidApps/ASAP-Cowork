@@ -1,11 +1,13 @@
 package bd.asap.cowork.toolintegrations
 
+import bd.asap.cowork.agentsdk.Workspace
 import bd.asap.cowork.llmgateway.ToolResult
 import bd.asap.cowork.llmgateway.ToolSpec
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
+import java.nio.file.Files
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
@@ -48,6 +50,10 @@ object RecordDeviceVideoTool {
                     "type" to "integer",
                     "description" to "Recording length in seconds. Defaults to $DEFAULT_SECONDS, capped at $MAX_SECONDS.",
                 ),
+                "directory" to mapOf(
+                    "type" to "string",
+                    "description" to "The project directory this recording is for (the same value passed to run_gradle/build tools), so it nests under that project instead of the shared workspace root.",
+                ),
             ),
             "required" to emptyList<String>(),
         ),
@@ -58,9 +64,13 @@ object RecordDeviceVideoTool {
             ?: return@withContext ToolResult("No emulator or device is connected. Start one with manage_emulator first.", isError = true)
 
         val seconds = ((input["seconds"] as? Number)?.toInt() ?: DEFAULT_SECONDS).coerceIn(1, MAX_SECONDS)
-        val videosDir = File(workspaceRoot, ".asap-videos").apply { mkdirs() }
+        val directory = normalizedProjectDirectory(input["directory"] as? String)
         val filename = "device-${System.currentTimeMillis()}-${UUID.randomUUID().toString().take(8)}.mp4"
-        val outputFile = File(videosDir, filename)
+        val relativePath = projectRelativePath(directory, ".asap-videos", filename)
+        val outputPath = Workspace(workspaceRoot.toPath()).resolve(relativePath)
+            ?: return@withContext ToolResult("Invalid directory: $directory", isError = true)
+        Files.createDirectories(outputPath.parent)
+        val outputFile = outputPath.toFile()
         val devicePath = "/sdcard/asap-recording-${UUID.randomUUID().toString().take(8)}.mp4"
 
         try {
@@ -97,7 +107,7 @@ object RecordDeviceVideoTool {
 
             ToolResult(
                 "Recorded a ${seconds}s video of the emulator.",
-                videoUrl = "/api/v1/videos/$filename",
+                videoUrl = projectAssetUrl(directory, "/api/v1/videos", filename),
                 notice = EMULATOR_NOTICE.takeIf { DeviceTargeting.isEmulator(serial) },
             )
         } catch (e: IOException) {

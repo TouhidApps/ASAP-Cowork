@@ -6,9 +6,11 @@ import bd.asap.cowork.toolintegrations.BackendProjectTool
 import bd.asap.cowork.toolintegrations.BackendServerTool
 import bd.asap.cowork.toolintegrations.CheckDependencyVulnerabilitiesTool
 import bd.asap.cowork.toolintegrations.DeviceScreenshotTool
+import bd.asap.cowork.toolintegrations.EditImageTool
 import bd.asap.cowork.toolintegrations.EmulatorTool
 import bd.asap.cowork.toolintegrations.FlutterBuildTool
 import bd.asap.cowork.toolintegrations.FlutterProjectTool
+import bd.asap.cowork.toolintegrations.GenerateImageTool
 import bd.asap.cowork.toolintegrations.GenerateStoreImageTool
 import bd.asap.cowork.toolintegrations.GradleTool
 import bd.asap.cowork.toolintegrations.IosLaunchAppTool
@@ -19,6 +21,7 @@ import bd.asap.cowork.toolintegrations.IosVideoTool
 import bd.asap.cowork.toolintegrations.KmpProjectTool
 import bd.asap.cowork.toolintegrations.LaunchAppTool
 import bd.asap.cowork.toolintegrations.MetroTool
+import bd.asap.cowork.toolintegrations.OptimizeImageTool
 import bd.asap.cowork.toolintegrations.ReactNativeProjectTool
 import bd.asap.cowork.toolintegrations.ReadDeviceLogsTool
 import bd.asap.cowork.toolintegrations.RecordDeviceVideoTool
@@ -81,7 +84,9 @@ fun Route.executeRoute() {
                         summary = result.summary,
                         isError = result.isError,
                         imageUrl = result.imageUrl,
+                        imageAlt = result.imageAlt,
                         videoUrl = result.videoUrl,
+                        fileUrl = result.fileUrl,
                         notice = result.notice,
                     ),
                 ),
@@ -121,5 +126,8 @@ private suspend fun dispatch(
     GenerateStoreImageTool.NAME -> GenerateStoreImageTool.execute(workspaceRoot, input)
     CheckDependencyVulnerabilitiesTool.NAME -> CheckDependencyVulnerabilitiesTool.execute(input)
     ScanForSecretsTool.NAME -> ScanForSecretsTool.execute(workspaceRoot, input)
+    GenerateImageTool.NAME -> GenerateImageTool.execute(workspaceRoot, input)
+    EditImageTool.NAME -> EditImageTool.execute(workspaceRoot, input)
+    OptimizeImageTool.NAME -> OptimizeImageTool.execute(workspaceRoot, input)
     else -> ToolResult("Unknown tool: $tool", isError = true)
 }

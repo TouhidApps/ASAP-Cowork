@@ -11,6 +11,7 @@ import bd.asap.cowork.agents.documentation.DocumentationAgent
 import bd.asap.cowork.agents.email.EmailAgent
 import bd.asap.cowork.agents.flutter.FlutterAgent
 import bd.asap.cowork.agents.generalpurpose.GeneralPurposeAgent
+import bd.asap.cowork.agents.imaging.ImagingAgent
 import bd.asap.cowork.agents.ios.IosAgent
 import bd.asap.cowork.agents.kmp.KmpAgent
 import bd.asap.cowork.agents.landingpage.LandingPageAgent
@@ -29,6 +30,7 @@ import bd.asap.cowork.agents.workspace.WorkspaceAgent
 import bd.asap.cowork.chatgateway.config.DotEnv
 import bd.asap.cowork.chatgateway.config.FirebaseCredentialsStore
 import bd.asap.cowork.chatgateway.config.GmailOAuthCredentialsStore
+import bd.asap.cowork.chatgateway.config.ImageGenCredentialsStore
 import bd.asap.cowork.chatgateway.config.ProviderCredentialsStore
 import bd.asap.cowork.chatgateway.config.ToolchainSettingsStore
 import bd.asap.cowork.chatgateway.config.WorkspaceSettingsStore
@@ -36,6 +38,7 @@ import bd.asap.cowork.chatgateway.features.admin.AdminService
 import bd.asap.cowork.chatgateway.features.admin.FirebaseCliService
 import bd.asap.cowork.chatgateway.features.admin.FirebaseService
 import bd.asap.cowork.chatgateway.features.admin.AllowedHostsService
+import bd.asap.cowork.chatgateway.features.admin.ImageAiService
 import bd.asap.cowork.chatgateway.features.admin.OllamaAdminService
 import bd.asap.cowork.chatgateway.features.admin.ToolchainService
 import bd.asap.cowork.chatgateway.features.admin.UsageService
@@ -54,6 +57,7 @@ import bd.asap.cowork.contextstore.EmailSettingsRepository
 import bd.asap.cowork.contextstore.NoteRepository
 import bd.asap.cowork.contextstore.SettingsRepository
 import bd.asap.cowork.firebase.FirebaseCredentialsRegistry
+import bd.asap.cowork.imagegen.ImageGenCredentialsRegistry
 import bd.asap.cowork.llmgateway.AnthropicLlmProvider
 import bd.asap.cowork.llmgateway.GeminiLlmProvider
 import bd.asap.cowork.llmgateway.LlmProviderRegistry
@@ -167,6 +171,11 @@ fun appModule(contextDatabase: ContextDatabase) = module {
         store
     }
     single(createdAtStart = true) {
+        val store = ImageGenCredentialsStore()
+        ImageGenCredentialsRegistry.set(store.read())
+        store
+    }
+    single(createdAtStart = true) {
         // Eager so GmailOAuthCredentialsRegistry is seeded at startup, not
         // on the first admin request — EmailAgent's token-refresh path
         // reads the registry synchronously, same reasoning as
@@ -191,6 +200,7 @@ fun appModule(contextDatabase: ContextDatabase) = module {
             register(DebuggingAgent(get()))
             register(CicdAgent(get()))
             register(BrandingAgent(get()))
+            register(ImagingAgent(get()))
             register(LegalDocAgent(get()))
             register(LandingPageAgent(get()))
             register(StoreAssetAgent(get()))
@@ -214,6 +224,7 @@ fun appModule(contextDatabase: ContextDatabase) = module {
     single { ToolchainService(get()) }
     single { FirebaseService(get()) }
     single { FirebaseCliService() }
+    single { ImageAiService(get()) }
     single { OllamaAdminService(get()) }
     single { AllowedHostsService() }
     single { UsageService(get()) }
