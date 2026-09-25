@@ -34,7 +34,7 @@ import kotlinx.coroutines.flow.flowOn
 class AnthropicLlmProvider(
     private val apiKeyProvider: () -> String? = { null },
     private val model: String = "claude-opus-5",
-    /** Used instead of [model] when a call passes `fast = true` (e.g. intent classification) — a short routing/classification decision doesn't need the flagship model's cost. */
+    /** Used instead of [model] when a call passes `fast = true` (e.g. the email agent's yes/no importance check) — a trivial low-stakes call doesn't need the flagship model's cost. Never used for orchestration/routing. */
     private val fastModel: String = "claude-haiku-4-5-20251001",
     private val maxTokens: Long = 8000,
     private val usageListener: UsageListener = UsageListener {},

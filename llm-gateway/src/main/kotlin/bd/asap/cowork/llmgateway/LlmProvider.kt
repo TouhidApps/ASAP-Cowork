@@ -24,7 +24,7 @@ interface LlmProvider {
     /**
      * Streams the model's reply as it's generated. [fast] routes to a
      * cheaper/smaller model instead of the provider's main one — for
-     * short, low-stakes calls like intent classification, where the main
+     * short, low-stakes calls (e.g. a yes/no email importance check), where the main
      * model's quality is unnecessary overhead. Defaults to false so every
      * existing call site keeps using the main model unless it opts in.
      */

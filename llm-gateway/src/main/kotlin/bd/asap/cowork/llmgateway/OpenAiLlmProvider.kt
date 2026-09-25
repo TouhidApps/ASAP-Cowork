@@ -24,7 +24,7 @@ import kotlinx.coroutines.flow.flowOn
 class OpenAiLlmProvider(
     private val apiKeyProvider: () -> String?,
     private val model: ChatModel = ChatModel.GPT_5_6_SOL,
-    /** Used instead of [model] when a call passes `fast = true` (e.g. intent classification) — a short routing/classification decision doesn't need the flagship model's cost. */
+    /** Used instead of [model] when a call passes `fast = true` (e.g. the email agent's yes/no importance check) — a trivial low-stakes call doesn't need the flagship model's cost. Never used for orchestration/routing. */
     private val fastModel: ChatModel = ChatModel.GPT_5_4_MINI,
     private val maxTokens: Long = 4096,
     private val usageListener: UsageListener = UsageListener {},

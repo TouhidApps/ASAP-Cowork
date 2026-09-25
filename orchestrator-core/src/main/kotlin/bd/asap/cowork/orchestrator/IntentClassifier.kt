@@ -44,12 +44,13 @@ class IntentClassifier(private val providers: LlmProviderRegistry) {
 
         val messages = history.map { it.toChatMessage() } + ChatMessage(ChatRole.USER, input)
         val reply = StringBuilder()
-        // fast = true: picking one capability id from a list is a trivial
-        // classification task that doesn't need the flagship model, and this
-        // roster system prompt is identical on every call in the app (see
-        // AnthropicLlmProvider's cache_control on system prompts), so the fast
-        // model + cache combo is what keeps this cheap on every single message.
-        providers.current().streamComplete(systemPrompt, messages, fast = true).collect { reply.append(it) }
+        // Main (flagship) model, not the fast tier: routing is the orchestrator's
+        // core decision — a misroute sends the whole turn to the wrong agent —
+        // and telling a short follow-up apart from a fresh request needs real
+        // reasoning over the history. Cost stays contained because this roster
+        // system prompt is identical on every call (see AnthropicLlmProvider's
+        // cache_control on system prompts), so it's billed at the cached rate.
+        providers.current().streamComplete(systemPrompt, messages).collect { reply.append(it) }
 
         val known = candidates.flatMap { it.capabilities }
         // If the model didn't name a capability the roster actually has, route

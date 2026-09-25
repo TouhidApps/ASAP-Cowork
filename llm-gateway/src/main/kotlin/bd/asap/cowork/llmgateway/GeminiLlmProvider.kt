@@ -25,7 +25,7 @@ import java.util.Base64
 class GeminiLlmProvider(
     private val apiKeyProvider: () -> String?,
     private val model: String = "gemini-3.1-pro-preview",
-    /** Used instead of [model] when a call passes `fast = true` (e.g. intent classification) — a short routing/classification decision doesn't need the flagship model's cost. */
+    /** Used instead of [model] when a call passes `fast = true` (e.g. the email agent's yes/no importance check) — a trivial low-stakes call doesn't need the flagship model's cost. Never used for orchestration/routing. */
     private val fastModel: String = "gemini-3.1-flash-preview",
     private val maxTokens: Int = 4096,
     private val usageListener: UsageListener = UsageListener {},
