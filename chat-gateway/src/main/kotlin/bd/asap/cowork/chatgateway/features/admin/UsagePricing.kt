@@ -2,7 +2,7 @@ package bd.asap.cowork.chatgateway.features.admin
 
 /**
  * Illustrative per-million-token USD rates, one blended rate per provider plus overrides for a
- * handful of known cheap/fast models (e.g. the classifier's Haiku calls) — the provider classes
+ * handful of known cheap/fast models (e.g. the email agent's importance-check calls) — the provider classes
  * in llm-gateway each point at whichever model string is configured/current, so pinning cost math
  * to one literal model id here would silently go stale the moment that default changes; the
  * per-provider blended rate stays the fallback for anything not explicitly listed. Tune these to
@@ -19,7 +19,7 @@ object UsagePricing {
         "ollama" to Rate(inputPer1M = 0.0, outputPer1M = 0.0),
     )
 
-    /** Cheap/fast models (see each provider's `fastModel`, used for `fast = true` calls like intent classification) priced well below their provider's flagship rate. */
+    /** Cheap/fast models (see each provider's `fastModel`, used for `fast = true` calls like the email importance check) priced well below their provider's flagship rate. */
     private val modelRates = mapOf(
         "claude-haiku-4-5-20251001" to Rate(inputPer1M = 1.0, outputPer1M = 5.0),
         "gemini-3.1-flash-preview" to Rate(inputPer1M = 0.15, outputPer1M = 0.6),
